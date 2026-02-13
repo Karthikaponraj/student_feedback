@@ -1,0 +1,62 @@
+﻿node : C:\Users\karth
+\OneDrive\Desktop\Stu
+dent_emotional_feedba
+ck\server\index.js:50
+1
+At line:1 char:1
++ node index.js 2>&1 
+| Out-File -FilePath 
+server_error.txt 
+-Encoding ut ...
++ ~~~~~~~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (C:\User   
+ s\karth\...er\in    
+dex.js:501:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+ 
+ 
+
+SyntaxError: Invalid 
+or unexpected token
+    at wrapSafe (node
+:internal/modules/cjs
+/loader:1662:18)
+    at 
+Module._compile (node
+:internal/modules/cjs
+/loader:1704:20)
+    at Object..js (no
+de:internal/modules/c
+js/loader:1895:10)
+    at Module.load (n
+ode:internal/modules/
+cjs/loader:1465:32)
+    at 
+Function._load (node:
+internal/modules/cjs/
+loader:1282:12)
+    at TracingChannel
+.traceSync (node:diag
+nostics_channel:322:1
+4)
+    at 
+wrapModuleLoad (node:
+internal/modules/cjs/
+loader:235:24)
+    at Function.execu
+teUserEntryPoint [as 
+runMain] (node:intern
+al/modules/run_main:1
+71:5)
+    at node:internal/
+main/run_main_module:
+36:49
+
+Node.js v22.17.1
