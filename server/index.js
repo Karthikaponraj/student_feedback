@@ -77,7 +77,17 @@ const authenticateToken = (req, res, next) => {
 
 app.post('/api/feedback', authenticateToken, async (req, res) => {
     try {
-        const { emotion, comment, emotion_intensity, helpRequested } = req.body;
+        const { 
+            emotion, 
+            comment, 
+            emotion_intensity, 
+            helpRequested,
+            emotion_domain,
+            emotion_triggers,
+            emotion_duration,
+            life_impact_score
+        } = req.body;
+        
         if (!emotion) return res.status(400).send("Emotion is mandatory");
 
         const status = helpRequested ? "pending" : "none";
@@ -88,6 +98,10 @@ app.post('/api/feedback', authenticateToken, async (req, res) => {
             email: req.user.email,
             emotion,
             emotion_intensity: emotion_intensity || 3,
+            emotion_domain: emotion_domain || null,
+            emotion_triggers: emotion_triggers || [],
+            emotion_duration: emotion_duration || null,
+            life_impact_score: life_impact_score || 3,
             helpRequested: helpRequested || false,
             comment: comment || "",
             status,
@@ -165,6 +179,7 @@ app.post('/api/student-details', authenticateToken, async (req, res) => {
 
         const details = new StudentDetails({
             ...req.body,
+            studentId: req.user.id,
             email: email.toLowerCase().trim(),
             regno: regno.trim()
         });
@@ -180,6 +195,38 @@ app.post('/api/student-details', authenticateToken, async (req, res) => {
         res.status(201).json({ message: "Student details saved successfully." });
     } catch (error) {
         console.error("❌ Error saving student details:", error.message);
+        res.status(500).send("Server Error");
+    }
+});
+
+app.get('/api/student-details/me', authenticateToken, async (req, res) => {
+    try {
+        // Try exact match by ID first, then by email
+        let details = await StudentDetails.findOne({ studentId: req.user.id });
+        
+        if (!details) {
+            const normalizedEmail = req.user.email.toLowerCase().trim();
+            details = await StudentDetails.findOne({ email: normalizedEmail });
+            
+            // Fallback for common truncation/typo issues in existing data
+            if (!details) {
+                const emailPrefix = normalizedEmail.split('@')[0];
+                details = await StudentDetails.findOne({ 
+                    email: { $regex: new RegExp(`^${emailPrefix}@`, 'i') } 
+                });
+            }
+
+            // If found by email, retroactively link the studentId for future reliability
+            if (details && !details.studentId) {
+                details.studentId = req.user.id;
+                await details.save();
+            }
+        }
+
+        if (!details) return res.status(404).json({ message: "No details found" });
+        res.json(details);
+    } catch (error) {
+        console.error("Error fetching my details:", error);
         res.status(500).send("Server Error");
     }
 });
@@ -217,12 +264,40 @@ app.get('/api/analytics', authenticateToken, async (req, res) => {
             .populate('student', 'name email')
             .sort({ timestamp: -1 });
 
-        const data = feedbacks.map(f => ({
-            id: f._id,
-            ...f.toObject(),
-            studentName: f.student ? f.student.name : (f.email ? f.email.split('@')[0] : 'Unknown'),
-            studentEmail: f.student ? f.student.email : f.email
-        }));
+        console.log(`[Analytics] Found ${feedbacks.length} feedbacks`);
+
+        // Get all student details for enrichment
+        const allStudentDetails = await StudentDetails.find({});
+        const detailsMap = {};
+        allStudentDetails.forEach(d => {
+            if (d.email) detailsMap[d.email.toLowerCase().trim()] = d;
+        });
+
+        const data = feedbacks.map(f => {
+            const studentEmail = (f.student ? f.student.email : f.email || "").toLowerCase().trim();
+            const studentName = f.student ? f.student.name : (f.email ? f.email.split('@')[0] : 'Unknown');
+            
+            // Robust lookup: exact match first, then prefix match for truncated data
+            let details = studentEmail ? detailsMap[studentEmail] : null;
+            if (!details && studentEmail) {
+                const prefix = studentEmail.split('@')[0];
+                // Find first details record that matches this prefix
+                const matchEmail = Object.keys(detailsMap).find(e => e.startsWith(prefix + '@'));
+                if (matchEmail) details = detailsMap[matchEmail];
+            }
+
+            return {
+                id: f._id,
+                ...f.toObject(),
+                studentName: details ? details.name : studentName,
+                studentEmail: studentEmail,
+                regno: details ? details.regno : (f.regno || 'N/A'),
+                department: details ? details.department : (f.department || 'N/A'),
+                batch: details ? details.batch : (f.batch || 'N/A'),
+                mobile: details ? details.mobile : (f.mobile || 'N/A'),
+                place: details ? details.place : (f.place || 'N/A')
+            };
+        });
         res.json(data);
     } catch (error) {
         console.error("Analytics Error:", error);
@@ -395,12 +470,37 @@ app.get('/api/admin/help-requests', authenticateToken, async (req, res) => {
             .populate('student', 'name email')
             .sort({ timestamp: -1 });
 
-        const data = requests.map(f => ({
-            id: f._id,
-            ...f.toObject(),
-            studentName: f.student ? f.student.name : (f.email ? f.email.split('@')[0] : 'Unknown'),
-            studentEmail: f.student ? f.student.email : f.email
-        }));
+        // Get all student details for enrichment
+        const allStudentDetails = await StudentDetails.find({});
+        const detailsMap = {};
+        allStudentDetails.forEach(d => {
+            if (d.email) detailsMap[d.email.toLowerCase().trim()] = d;
+        });
+
+        const data = requests.map(f => {
+            const studentEmail = (f.student ? f.student.email : f.email || "").toLowerCase().trim();
+            const studentName = f.student ? f.student.name : (f.email ? f.email.split('@')[0] : 'Unknown');
+            
+            // Robust lookup
+            let details = studentEmail ? detailsMap[studentEmail] : null;
+            if (!details && studentEmail) {
+                const prefix = studentEmail.split('@')[0];
+                const matchEmail = Object.keys(detailsMap).find(e => e.startsWith(prefix + '@'));
+                if (matchEmail) details = detailsMap[matchEmail];
+            }
+
+            return {
+                id: f._id,
+                ...f.toObject(),
+                studentName: details ? details.name : studentName,
+                studentEmail: studentEmail,
+                regno: details ? details.regno : (f.regno || 'N/A'),
+                department: details ? details.department : (f.department || 'N/A'),
+                batch: details ? details.batch : (f.batch || 'N/A'),
+                mobile: details ? details.mobile : (f.mobile || 'N/A'),
+                place: details ? details.place : (f.place || 'N/A')
+            };
+        });
         res.json(data);
     } catch (error) {
         console.error("Fetch Help Requests Error:", error);
@@ -568,6 +668,8 @@ app.get('/api/faculty/my-students', authenticateToken, async (req, res) => {
         const feedbacks = await Feedback.find({ assignedFacultyEmail: facultyEmail })
             .populate('student', 'name email')
             .sort({ timestamp: -1 });
+        
+        console.log(`[Faculty] Found ${feedbacks.length} feedbacks for ${facultyEmail}`);
 
         // Get all student details for enrichment
         const allStudentDetails = await StudentDetails.find({});
@@ -577,30 +679,26 @@ app.get('/api/faculty/my-students', authenticateToken, async (req, res) => {
         });
 
         const data = feedbacks.map(f => {
-            const studentEmail = f.student ? f.student.email : f.email;
+            const studentEmail = (f.student ? f.student.email : f.email || "").toLowerCase().trim();
             const studentName = f.student ? f.student.name : (f.email ? f.email.split('@')[0] : 'Unknown');
-            const details = studentEmail ? detailsMap[studentEmail.toLowerCase().trim()] : null;
+            
+            // Robust lookup
+            let details = studentEmail ? detailsMap[studentEmail] : null;
+            if (!details && studentEmail) {
+                const prefix = studentEmail.split('@')[0];
+                const matchEmail = Object.keys(detailsMap).find(e => e.startsWith(prefix + '@'));
+                if (matchEmail) details = detailsMap[matchEmail];
+            }
 
             return {
                 id: f._id,
-                emotion: f.emotion,
-                emotion_intensity: f.emotion_intensity,
-                comment: f.comment,
-                helpRequested: f.helpRequested,
-                status: f.status,
-                date: f.date,
-                assignedMentor: f.assignedMentor,
-                assignedFacultyName: f.assignedFacultyName,
-                meetingTimeSlot: f.meetingTimeSlot,
-                meetingVenue: f.meetingVenue,
+                ...f.toObject(),
                 studentName: details ? details.name : studentName,
                 studentEmail: studentEmail,
                 studentDetails: details ? {
-                    name: details.name,
                     regno: details.regno,
                     department: details.department,
                     batch: details.batch,
-                    email: details.email,
                     mobile: details.mobile,
                     place: details.place
                 } : null

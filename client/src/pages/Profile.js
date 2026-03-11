@@ -21,6 +21,7 @@ const Profile = () => {
     });
     const [message, setMessage] = useState({ text: '', type: '' });
     const [loading, setLoading] = useState(false);
+    const [studentInfo, setStudentInfo] = useState(null);
 
     useEffect(() => {
         if (currentUser) {
@@ -28,8 +29,15 @@ const Profile = () => {
                 name: currentUser.name || '',
                 email: currentUser.email || ''
             });
+
+            // Fetch student details if user is a student to get regno
+            if (userRole === 'student') {
+                apiClient('/student-details/me')
+                    .then(data => setStudentInfo(data))
+                    .catch(err => console.error("Error fetching student details:", err));
+            }
         }
-    }, [currentUser]);
+    }, [currentUser, userRole]);
 
     const handleProfileUpdate = async (e) => {
         e.preventDefault();
@@ -83,8 +91,8 @@ const Profile = () => {
 
     return (
         <div className="container" style={{ paddingTop: '30px' }}>
-            <h1 style={{ marginBottom: '30px', color: '#394d46', textAlign: 'center' }}>My Profile</h1>
-            <div className="card" style={{ maxWidth: '600px', margin: '0 auto', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', position: 'relative' }}>
+            <h1 style={{ marginBottom: '30px', color: 'var(--primary-slate)', textAlign: 'center' }}>My Profile</h1>
+            <div className="card" style={{ maxWidth: '600px', margin: '0 auto', boxShadow: 'var(--shadow-lg)', position: 'relative' }}>
                 <button
                     onClick={() => navigate('/')}
                     style={{
@@ -94,7 +102,7 @@ const Profile = () => {
                         background: 'none',
                         border: 'none',
                         fontSize: '1.5rem',
-                        color: '#64748b',
+                        color: 'var(--text-secondary)',
                         cursor: 'pointer',
                         padding: '5px',
                         lineHeight: 1,
@@ -102,7 +110,7 @@ const Profile = () => {
                         transition: 'background 0.2s',
                         zIndex: 10
                     }}
-                    onMouseOver={(e) => e.target.style.background = '#f1f5f9'}
+                    onMouseOver={(e) => e.target.style.background = 'var(--bg-color)'}
                     onMouseOut={(e) => e.target.style.background = 'none'}
                 >
                     ×
@@ -142,9 +150,9 @@ const Profile = () => {
                         padding: '12px',
                         borderRadius: '8px',
                         marginBottom: '20px',
-                        backgroundColor: message.type === 'success' ? '#f0fdf4' : '#fef2f2',
-                        color: message.type === 'success' ? '#166534' : '#991b1b',
-                        border: `1px solid ${message.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+                        backgroundColor: message.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        color: message.type === 'success' ? 'var(--success-green)' : 'var(--danger-red)',
+                        border: `1px solid ${message.type === 'success' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
                         textAlign: 'center',
                         fontWeight: '500'
                     }}>
@@ -154,7 +162,7 @@ const Profile = () => {
 
                 {showPasswordForm ? (
                     <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        <h3 style={{ margin: '0 0 10px 0', fontSize: '1.2rem', color: '#1e293b' }}>Update Security</h3>
+                        <h3 style={{ margin: '0 0 10px 0', fontSize: '1.2rem', color: 'var(--text-main)' }}>Update Security</h3>
                         <div className="form-group">
                             <label>Current Password</label>
                             <input
@@ -204,21 +212,23 @@ const Profile = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                             <div className="form-group">
-                                <label style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Full Name</label>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase' }}>Full Name</label>
                                 <input
                                     type="text"
                                     value={profileData.name}
                                     onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
                                     required
+                                    style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
                                 />
                             </div>
                             <div className="form-group">
-                                <label style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Email</label>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase' }}>Email</label>
                                 <input
                                     type="email"
                                     value={profileData.email}
                                     onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
                                     required
+                                    style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
                                 />
                             </div>
                         </div>
@@ -245,22 +255,24 @@ const Profile = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                             <div className="form-group">
-                                <label style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Email Address</label>
-                                <div style={{ padding: '10px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#1e293b' }}>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase' }}>Email Address</label>
+                                <div style={{ padding: '10px', backgroundColor: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}>
                                     {currentUser?.email}
                                 </div>
                             </div>
                             <div className="form-group">
-                                <label style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Account ID</label>
-                                <div style={{ padding: '10px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#1e293b', fontSize: '0.8rem' }}>
-                                    {currentUser?.id || currentUser?.uid}
+                                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                                    {userRole === 'student' ? 'Reg No' : userRole === 'faculty' ? 'Faculty ID' : 'Admin ID'}
+                                </label>
+                                <div style={{ padding: '10px', backgroundColor: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.8rem' }}>
+                                    {userRole === 'student' ? (studentInfo?.regno || 'Loading...') : (currentUser?.id || currentUser?.uid)}
                                 </div>
                             </div>
                         </div>
 
                         <div style={{ marginTop: '30px', display: 'flex', gap: '15px' }}>
                             <button
-                                className="btn btn-primary"
+                                className="btn btn-outline-primary"
                                 onClick={() => setShowPasswordForm(true)}
                                 style={{ flex: 1 }}
                             >

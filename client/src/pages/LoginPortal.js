@@ -6,7 +6,7 @@ const LoginPortal = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [loadingRole, setLoadingRole] = useState(null); // 'student', 'admin', 'faculty' or null
     const [showRoleButtons, setShowRoleButtons] = useState(false);
     const [showRegisterOptions, setShowRegisterOptions] = useState(false);
     const { login, logout } = useAuth();
@@ -21,7 +21,7 @@ const LoginPortal = () => {
             return;
         }
 
-        setIsLoading(true);
+        setLoadingRole(role);
 
         try {
             const user = await login(email, password, role);
@@ -42,15 +42,15 @@ const LoginPortal = () => {
                 setError(err.message || "An error occurred. Please try again.");
             }
         } finally {
-            setIsLoading(false);
+            setLoadingRole(null);
         }
     };
 
     return (
         <div className="login-portal-container">
             <header className="login-page-header">
-                <h1>Student Emotional Feedback System</h1>
-                <p>Role-based secure login portal</p>
+                <h1>Student Emotional Feedback Platform</h1>
+                <p>Role-Based Secure Login Portal</p>
             </header>
             <div className="login-portal-card">
                 <div className="login-icon-header">
@@ -95,7 +95,6 @@ const LoginPortal = () => {
                             <input type="checkbox" />
                             <span>Remember me</span>
                         </label>
-                        <Link to="/forgot-password" color="#4b6159" className="forgot-password">Forgot Password?</Link>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -118,27 +117,27 @@ const LoginPortal = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', animation: 'fadeInDown 0.4s ease-out' }}>
                                 <button
                                     type="button"
-                                    className="login-btn-action"
+                                    className="login-btn-action login-btn-student"
                                     onClick={() => handleLogin('student')}
-                                    disabled={isLoading}
+                                    disabled={loadingRole !== null}
                                 >
-                                    {isLoading ? '...' : 'Login as Student'}
+                                    {loadingRole === 'student' ? '...' : 'Login as Student'}
                                 </button>
                                 <button
                                     type="button"
-                                    className="login-btn-action"
+                                    className="login-btn-action login-btn-admin"
                                     onClick={() => handleLogin('admin')}
-                                    disabled={isLoading}
+                                    disabled={loadingRole !== null}
                                 >
-                                    {isLoading ? '...' : 'Login as Admin'}
+                                    {loadingRole === 'admin' ? '...' : 'Login as Admin'}
                                 </button>
                                 <button
                                     type="button"
-                                    className="login-btn-action"
+                                    className="login-btn-action login-btn-faculty"
                                     onClick={() => handleLogin('faculty')}
-                                    disabled={isLoading}
+                                    disabled={loadingRole !== null}
                                 >
-                                    {isLoading ? '...' : 'Login as Faculty'}
+                                    {loadingRole === 'faculty' ? '...' : 'Login as Faculty'}
                                 </button>
                             </div>
                         )}
@@ -148,7 +147,7 @@ const LoginPortal = () => {
                 <div className="register-section">
                     {!showRegisterOptions ? (
                         <div>
-                            <span style={{ opacity: 0.8 }}>Don't have an account? </span>
+                            <span style={{ color: '#64748b', fontWeight: '500' }}>Don't have an account? </span>
                             <span
                                 onClick={() => setShowRegisterOptions(true)}
                                 className="register-link-trigger"

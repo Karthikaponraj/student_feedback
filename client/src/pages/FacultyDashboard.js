@@ -1,5 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiClient } from '../utils/apiClient';
+import { Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ChartDataLabels);
 
 const FacultyDashboard = () => {
     const [cases, setCases] = useState([]);
@@ -63,6 +68,16 @@ const FacultyDashboard = () => {
     };
 
     const handleSave = async (feedbackId) => {
+        const targetCase = cases.find(c => c.id === feedbackId);
+        // Validation: If status is being updated from Allocated to Yet to Meet or Ongoing, require meeting details
+        if (targetCase && (!targetCase.status || targetCase.status === 'allocated') && (editData.status === 'yet_to_meet' || editData.status === 'ongoing')) {
+            if (!editData.meetingTimeSlot || !editData.meetingVenue) {
+                setMessage({ text: 'Meeting Time Slot and Venue are required before scheduling.', type: 'error' });
+                setTimeout(() => setMessage({ text: '', type: '' }), 3000);
+                return;
+            }
+        }
+
         setSaving(feedbackId);
         try {
             await apiClient(`/faculty/update-case/${feedbackId}`, {
@@ -104,10 +119,100 @@ const FacultyDashboard = () => {
     // Stats
     const stats = {
         total: cases.length,
-        yetToMeet: cases.filter(c => c.status === 'allocated' || c.status === 'yet_to_meet').length,
+        needsScheduling: cases.filter(c => (c.status === 'allocated' || !c.status) && !c.meetingTimeSlot).length,
+        yetToMeet: cases.filter(c => c.status === 'yet_to_meet').length,
         ongoing: cases.filter(c => c.status === 'ongoing').length,
         resolved: cases.filter(c => c.status === 'resolved').length
     };
+
+    // Emotion Chart Data
+    const emotionChartData = useMemo(() => {
+        const counts = { Happy: 0, Stressed: 0, Anxious: 0, Neutral: 0, Sad: 0 };
+        cases.forEach(c => {
+            if (counts[c.emotion] !== undefined) {
+                counts[c.emotion]++;
+            } else if (c.emotion) {
+                counts.Neutral++;
+            }
+        });
+
+        return {
+            labels: ['Happy', 'Stressed', 'Anxious', 'Neutral', 'Sad'],
+            datasets: [
+                {
+                    label: 'Student Count',
+                    data: [counts.Happy, counts.Stressed, counts.Anxious, counts.Neutral, counts.Sad],
+                    backgroundColor: [
+                        '#10b981',  // Happy (Emerald Green)
+                        '#f43f5e',  // Stressed (Rose Red)
+                        '#f59e0b',  // Anxious (Amber Orange)
+                        '#64748b',  // Neutral (Slate Grey)
+                        '#3b82f6'   // Sad (Blue)
+                    ],
+                    borderColor: [
+                        '#10b981',
+                        '#f43f5e',
+                        '#f59e0b',
+                        '#64748b',
+                        '#3b82f6'
+                    ],
+                    borderWidth: 1,
+                    borderRadius: 6,
+                    barPercentage: 0.6,
+                }
+            ],
+            counts: counts
+        };
+    }, [cases]);
+
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            title: { display: false },
+            tooltip: {
+                enabled: true
+            },
+            datalabels: {
+                anchor: 'end',
+                align: 'top',
+                color: '#475569',
+                font: {
+                    weight: '800',
+                    size: 14
+                },
+                formatter: (value) => value > 0 ? value : ''
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Student Count',
+                    color: '#1e293b',
+                    font: { weight: 'bold' }
+                },
+                ticks: { stepSize: 1 }
+            },
+            x: {
+                title: {
+                    display: true,
+                    text: 'Emotion Categories',
+                    color: '#1e293b',
+                    font: { weight: 'bold' }
+                }
+            }
+        },
+        animation: {
+            duration: 1500,
+            easing: 'easeOutQuart'
+        }
+    };
+
+    const [hoveredStat, setHoveredStat] = useState(null);
+    const [hoveredBreakdown, setHoveredBreakdown] = useState(null);
 
     if (loading) {
         return (
@@ -137,247 +242,438 @@ const FacultyDashboard = () => {
             )}
 
             {/* Stats Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '30px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', marginBottom: '30px' }}>
                 {[
-                    { label: 'Total Allocated', value: stats.total, color: '#4b6159', icon: '📋' },
-                    { label: 'Yet to Meet', value: stats.yetToMeet, color: '#d97706', icon: '🕐' },
+                    { label: 'Total Allocated', value: stats.total, color: '#2563eb', icon: '📋' },
+                    { label: 'Needs Scheduling', value: stats.needsScheduling, color: '#d97706', icon: '📅' },
+                    { label: 'Yet to Meet', value: stats.yetToMeet, color: '#64748b', icon: '🕒' },
                     { label: 'Ongoing', value: stats.ongoing, color: '#7c3aed', icon: '🔄' },
-                    { label: 'Resolved', value: stats.resolved, color: '#059669', icon: '✅' }
+                    { label: 'Resolved', value: stats.resolved, color: '#10b981', icon: '✅' }
                 ].map((s, i) => (
-                    <div key={i} style={{
-                        background: '#fff',
-                        borderRadius: '12px',
-                        padding: '20px',
-                        borderLeft: `5px solid ${s.color}`,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-                    }}>
-                        <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</div>
-                        <div style={{ fontSize: '2rem', fontWeight: 800, color: s.color, marginTop: '6px' }}>
-                            {s.icon} {s.value}
+                    <div 
+                        key={i} 
+                        onMouseEnter={() => setHoveredStat(i)}
+                        onMouseLeave={() => setHoveredStat(null)}
+                        style={{
+                            background: '#fff',
+                            borderRadius: '10px',
+                            padding: '16px 20px',
+                            boxShadow: hoveredStat === i ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '0 2px 5px rgba(0,0,0,0.04)',
+                            border: '1px solid #e2e8f0',
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            transform: hoveredStat === i ? 'translateY(-4px)' : 'translateY(0)',
+                            cursor: 'default'
+                        }}
+                    >
+                        <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '12px' }}>{s.label}</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            <span style={{ 
+                                backgroundColor: hoveredStat === i ? s.color : `${s.color}15`, 
+                                padding: '8px', 
+                                borderRadius: '8px', 
+                                fontSize: '1.2rem',
+                                color: hoveredStat === i ? '#fff' : s.color,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.3s'
+                            }}>{s.icon}</span>
+                            {s.value}
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/* Student Cases */}
-            <div className="card" style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+            {/* Consolidated Student Cases Card */}
+            <div className="card" style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '30px' }}>
                 <h2 style={{ borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', marginBottom: '20px', color: '#4b6159' }}>
                     Allocated Students
                 </h2>
 
-                {cases.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                        <div style={{ fontSize: '3rem', marginBottom: '10px' }}>📭</div>
-                        <p style={{ color: '#64748b', fontSize: '1.1rem' }}>No students have been allocated to you yet.</p>
-                        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Students will appear here once the admin assigns them to you.</p>
-                    </div>
-                ) : (
-                    <div>
-                        {cases.map(c => (
-                            <div key={c.id} style={{
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '10px',
-                                marginBottom: '12px',
-                                overflow: 'hidden',
-                                transition: 'box-shadow 0.2s',
-                                boxShadow: expandedId === c.id ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'
-                            }}>
-                                {/* Row Header */}
-                                <div
-                                    onClick={() => toggleExpand(c.id)}
-                                    style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: '1fr 1fr 1fr 1fr auto',
-                                        alignItems: 'center',
-                                        padding: '14px 20px',
-                                        cursor: 'pointer',
-                                        backgroundColor: expandedId === c.id ? '#f8fafc' : '#fff',
-                                        transition: 'background 0.2s'
-                                    }}
-                                >
-                                    <div>
-                                        <strong style={{ color: '#1e293b' }}>{c.studentName}</strong>
-                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{c.studentEmail}</div>
-                                    </div>
-                                    <div>
-                                        <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                                            {c.studentDetails?.department || '—'}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span style={{
-                                            padding: '4px 10px',
-                                            borderRadius: '12px',
-                                            backgroundColor: `${getEmotionColor(c.emotion)}20`,
-                                            color: getEmotionColor(c.emotion),
-                                            fontWeight: 700,
-                                            fontSize: '0.85rem'
-                                        }}>
-                                            {getEmotionEmoji(c.emotion)} {c.emotion}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span style={{
-                                            padding: '4px 12px',
-                                            borderRadius: '12px',
-                                            backgroundColor: `${statusColors[c.status] || '#6b7280'}15`,
-                                            color: statusColors[c.status] || '#6b7280',
-                                            fontWeight: 700,
-                                            fontSize: '0.85rem',
-                                            border: `1px solid ${statusColors[c.status] || '#6b7280'}40`
-                                        }}>
-                                            {statusLabels[c.status] || c.status}
-                                        </span>
-                                    </div>
-                                    <div style={{ fontSize: '1.2rem', color: '#94a3b8', transform: expandedId === c.id ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.3s' }}>
-                                        ▼
-                                    </div>
-                                </div>
+                {[
+                    { id: 'allocated', title: 'Allocated Students', list: cases.filter(c => !c.status || c.status === 'allocated'), color: '#2563eb' },
+                    { id: 'yet_to_meet', title: 'Yet to Meet Students', list: cases.filter(c => c.status === 'yet_to_meet'), color: '#d97706' },
+                    { id: 'ongoing', title: 'Ongoing Students', list: cases.filter(c => c.status === 'ongoing'), color: '#7c3aed' },
+                    { id: 'resolved', title: 'Resolved Students', list: cases.filter(c => c.status === 'resolved'), color: '#059669' }
+                ].map((section, sectionIdx) => (
+                    <div key={section.id} style={{ marginBottom: sectionIdx < 3 ? '25px' : '0' }}>
+                        <h3 style={{ 
+                            fontSize: '1.1rem', 
+                            color: '#475569', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '10px',
+                            marginBottom: '15px',
+                            fontWeight: 600
+                        }}>
+                            <span style={{ color: section.color, fontSize: '1.5rem' }}>•</span>
+                            {section.title} ({section.list.length})
+                        </h3>
 
-                                {/* Expanded Details */}
-                                {expandedId === c.id && (
-                                    <div style={{ padding: '20px', borderTop: '1px solid #e2e8f0', backgroundColor: '#f8fafc', animation: 'fadeIn 0.3s ease-out' }}>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                                            {/* Student Details */}
-                                            <div>
-                                                <h4 style={{ color: '#4b6159', marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
-                                                    📋 Student Details
-                                                </h4>
-                                                {c.studentDetails ? (
-                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.9rem' }}>
-                                                        <div><strong>Name:</strong> {c.studentDetails.name}</div>
-                                                        <div><strong>Reg No:</strong> {c.studentDetails.regno}</div>
-                                                        <div><strong>Department:</strong> {c.studentDetails.department}</div>
-                                                        <div><strong>Batch:</strong> {c.studentDetails.batch}</div>
-                                                        <div><strong>Email:</strong> {c.studentDetails.email}</div>
-                                                        <div><strong>Mobile:</strong> {c.studentDetails.mobile}</div>
-                                                        <div style={{ gridColumn: 'span 2' }}><strong>Place:</strong> {c.studentDetails.place}</div>
-                                                    </div>
-                                                ) : (
-                                                    <p style={{ color: '#94a3b8', fontStyle: 'italic' }}>Student details not submitted yet.</p>
-                                                )}
+                        {section.list.length === 0 ? (
+                            <div style={{ padding: '10px 20px', borderLeft: '1px solid #e2e8f0', marginLeft: '8px' }}>
+                                <p style={{ color: '#94a3b8', fontSize: '0.9rem', fontStyle: 'italic', margin: 0 }}>
+                                    No {section.title.toLowerCase()} list.
+                                </p>
+                            </div>
+                        ) : (
+                            <div style={{ marginLeft: '8px', borderLeft: '1px solid #e2e8f0', paddingLeft: '20px' }}>
+                                {section.list.map(c => {
+                                    const isLocked = !!(c.meetingTimeSlot && c.meetingVenue && c.status && c.status !== 'allocated');
+                                    const isResolved = c.status === 'resolved';
 
-                                                <h4 style={{ color: '#4b6159', marginTop: '20px', marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
-                                                    💬 Feedback Info
-                                                </h4>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.9rem' }}>
-                                                    <div><strong>Emotion:</strong> {getEmotionEmoji(c.emotion)} {c.emotion}</div>
-                                                    <div><strong>Intensity:</strong> {c.emotion_intensity}/5</div>
-                                                    <div><strong>Date:</strong> {c.date}</div>
-                                                    <div><strong>Help Requested:</strong> {c.helpRequested ? '✅ Yes' : 'No'}</div>
-                                                    <div style={{ gridColumn: 'span 2' }}><strong>Comment:</strong> {c.comment || <em>No comment</em>}</div>
+                                    let availableStatuses = [];
+                                    if (section.id === 'allocated') {
+                                        availableStatuses = statusOptions.filter(opt => ['allocated', 'yet_to_meet', 'ongoing'].includes(opt.value));
+                                    } else if (section.id === 'yet_to_meet') {
+                                        availableStatuses = statusOptions.filter(opt => ['yet_to_meet', 'ongoing'].includes(opt.value));
+                                    } else if (section.id === 'ongoing') {
+                                        availableStatuses = statusOptions.filter(opt => ['ongoing', 'resolved'].includes(opt.value));
+                                    } else {
+                                        availableStatuses = statusOptions.filter(opt => opt.value === 'resolved');
+                                    }
+
+                                    return (
+                                        <div key={c.id} style={{
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: '10px',
+                                            marginBottom: '12px',
+                                            overflow: 'hidden',
+                                            transition: 'box-shadow 0.2s',
+                                            boxShadow: expandedId === c.id ? '0 4px 12px rgba(0,0,0,0.1)' : 'none',
+                                            backgroundColor: '#fff'
+                                        }}>
+                                            {/* Row Header */}
+                                            <div
+                                                onClick={() => toggleExpand(c.id)}
+                                                style={{
+                                                    display: 'grid',
+                                                    gridTemplateColumns: '1.5fr 1fr 1fr 1fr auto',
+                                                    alignItems: 'center',
+                                                    padding: '14px 20px',
+                                                    cursor: 'pointer',
+                                                    backgroundColor: expandedId === c.id ? '#f8fafc' : '#fff',
+                                                    transition: 'background 0.2s'
+                                                }}
+                                            >
+                                                <div>
+                                                    <strong style={{ color: '#1e293b' }}>{c.studentName}</strong>
+                                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{c.studentDetails?.regno || c.regno || '—'}</div>
+                                                </div>
+                                                <div>
+                                                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                                        {c.studentDetails?.department || '—'}
+                                                    </span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <span style={{ fontSize: '1.2rem' }}>{getEmotionEmoji(c.emotion)}</span>
+                                                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>{c.emotion}</span>
+                                                </div>
+                                                <div>
+                                                    <span style={{
+                                                        fontSize: '0.85rem',
+                                                        color: statusColors[c.status || 'allocated'],
+                                                        fontWeight: 600
+                                                    }}>
+                                                        {statusLabels[c.status || 'allocated']}
+                                                    </span>
+                                                </div>
+                                                <div style={{ fontSize: '1rem', color: '#94a3b8', transform: expandedId === c.id ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.3s' }}>
+                                                    ▼
                                                 </div>
                                             </div>
 
-                                            {/* Action Form */}
-                                            <div>
-                                                <h4 style={{ color: '#4b6159', marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
-                                                    ⚙️ Case Management
-                                                </h4>
+                                            {/* Expanded Details */}
+                                            {expandedId === c.id && (
+                                                <div style={{ padding: '20px', borderTop: '1px solid #e2e8f0', backgroundColor: '#f8fafc', animation: 'fadeIn 0.3s ease-out' }}>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                                                        {/* Student Details */}
+                                                        <div>
+                                                            <h4 style={{ color: '#4b6159', marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
+                                                                📋 Student Details
+                                                            </h4>
+                                                            {c.studentDetails ? (
+                                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.9rem' }}>
+                                                                    <div><strong>Name:</strong> {c.studentDetails.name}</div>
+                                                                    <div><strong>Reg No:</strong> {c.studentDetails.regno}</div>
+                                                                    <div><strong>Department:</strong> {c.studentDetails.department}</div>
+                                                                    <div><strong>Batch:</strong> {c.studentDetails.batch}</div>
+                                                                    <div><strong>Email:</strong> {c.studentDetails.email}</div>
+                                                                    <div><strong>Mobile:</strong> {c.studentDetails.mobile}</div>
+                                                                    <div style={{ gridColumn: 'span 2' }}><strong>Place:</strong> {c.studentDetails.place}</div>
+                                                                </div>
+                                                            ) : (
+                                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.9rem' }}>
+                                                                    <div><strong>Name:</strong> {c.studentName}</div>
+                                                                    <div><strong>Email:</strong> {c.studentEmail}</div>
+                                                                </div>
+                                                            )}
 
-                                                <div style={{ marginBottom: '16px' }}>
-                                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: '#334155', fontSize: '0.9rem' }}>
-                                                        Status
-                                                    </label>
-                                                    <select
-                                                        value={editData.status || ''}
-                                                        onChange={(e) => setEditData(prev => ({ ...prev, status: e.target.value }))}
-                                                        style={{
-                                                            width: '100%',
-                                                            padding: '10px 12px',
-                                                            borderRadius: '8px',
-                                                            border: '1px solid #cbd5e1',
-                                                            fontSize: '0.95rem',
-                                                            backgroundColor: '#fff'
-                                                        }}
-                                                    >
-                                                        {statusOptions.map(opt => (
-                                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
+                                                            <h4 style={{ color: '#4b6159', marginTop: '20px', marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
+                                                                💬 Feedback Info
+                                                            </h4>
+                                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.9rem' }}>
+                                                                <div><strong>Emotion:</strong> {getEmotionEmoji(c.emotion)} {c.emotion}</div>
+                                                                    <div><strong>Intensity:</strong> {c.emotion_intensity}/5</div>
+                                                                    <div><strong>Impact Score:</strong> {c.life_impact_score || '—'}/5</div>
+                                                                    <div style={{ gridColumn: 'span 2' }}>
+                                                                        <strong>Primary Cause:</strong> {c.emotion_domain || c.reason || '—'}
+                                                                    </div>
+                                                                    {c.emotion_triggers && c.emotion_triggers.length > 0 && (
+                                                                        <div style={{ gridColumn: 'span 2' }}>
+                                                                            <strong>Triggers:</strong> {Array.isArray(c.emotion_triggers) ? c.emotion_triggers.join(', ') : c.emotion_triggers}
+                                                                        </div>
+                                                                    )}
+                                                                    <div><strong>Duration:</strong> {c.emotion_duration || '—'}</div>
+                                                                    <div><strong>Date:</strong> {c.date}</div>
+                                                                    <div><strong>Help Requested:</strong> {c.helpRequested ? '✅ Yes' : 'No'}</div>
+                                                                    <div style={{ gridColumn: 'span 2' }}><strong>Comment:</strong> {c.comment || <em>No comment</em>}</div>
+                                                                </div>
+                                                        </div>
 
-                                                <div style={{ marginBottom: '16px' }}>
-                                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: '#334155', fontSize: '0.9rem' }}>
-                                                        Meeting Time Slot
-                                                    </label>
-                                                    <input
-                                                        type="datetime-local"
-                                                        value={editData.meetingTimeSlot || ''}
-                                                        onChange={(e) => setEditData(prev => ({ ...prev, meetingTimeSlot: e.target.value }))}
-                                                        style={{
-                                                            width: '100%',
-                                                            padding: '10px 12px',
-                                                            borderRadius: '8px',
-                                                            border: '1px solid #cbd5e1',
-                                                            fontSize: '0.95rem',
-                                                            boxSizing: 'border-box'
-                                                        }}
-                                                    />
-                                                </div>
+                                                        {/* Action Form */}
+                                                        <div>
+                                                            <h4 style={{ color: '#4b6159', marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
+                                                                ⚙️ Case Management
+                                                            </h4>
 
-                                                <div style={{ marginBottom: '16px' }}>
-                                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: '#334155', fontSize: '0.9rem' }}>
-                                                        Meeting Venue
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="e.g. Room 302, Main Block"
-                                                        value={editData.meetingVenue || ''}
-                                                        onChange={(e) => setEditData(prev => ({ ...prev, meetingVenue: e.target.value }))}
-                                                        style={{
-                                                            width: '100%',
-                                                            padding: '10px 12px',
-                                                            borderRadius: '8px',
-                                                            border: '1px solid #cbd5e1',
-                                                            fontSize: '0.95rem',
-                                                            boxSizing: 'border-box'
-                                                        }}
-                                                    />
-                                                </div>
+                                                            <div style={{ marginBottom: '16px' }}>
+                                                                <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: '#334155', fontSize: '0.9rem' }}>
+                                                                    Status
+                                                                </label>
+                                                                <select
+                                                                    value={editData.status || ''}
+                                                                    onChange={(e) => setEditData(prev => ({ ...prev, status: e.target.value }))}
+                                                                    disabled={isResolved}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '10px 12px',
+                                                                        borderRadius: '8px',
+                                                                        border: '1px solid #cbd5e1',
+                                                                        fontSize: '0.95rem',
+                                                                        backgroundColor: isResolved ? '#f1f5f9' : '#fff',
+                                                                        cursor: isResolved ? 'not-allowed' : 'pointer'
+                                                                    }}
+                                                                >
+                                                                    {availableStatuses.map(opt => (
+                                                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
 
-                                                {/* Show current meeting info if set */}
-                                                {(c.meetingTimeSlot || c.meetingVenue) && (
-                                                    <div style={{
-                                                        backgroundColor: '#eff6ff',
-                                                        padding: '10px 14px',
-                                                        borderRadius: '8px',
-                                                        marginBottom: '16px',
-                                                        fontSize: '0.85rem',
-                                                        border: '1px solid #bfdbfe'
-                                                    }}>
-                                                        <strong>Current Schedule:</strong><br />
-                                                        {c.meetingTimeSlot && <span>🕐 {new Date(c.meetingTimeSlot).toLocaleString()}<br /></span>}
-                                                        {c.meetingVenue && <span>📍 {c.meetingVenue}</span>}
+                                                            <div style={{ marginBottom: '16px' }}>
+                                                                <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: '#334155', fontSize: '0.9rem' }}>
+                                                                    Meeting Time Slot
+                                                                </label>
+                                                                <input
+                                                                    type="datetime-local"
+                                                                    value={editData.meetingTimeSlot || ''}
+                                                                    onChange={(e) => setEditData(prev => ({ ...prev, meetingTimeSlot: e.target.value }))}
+                                                                    disabled={isLocked || isResolved}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '10px 12px',
+                                                                        borderRadius: '8px',
+                                                                        border: '1px solid #cbd5e1',
+                                                                        fontSize: '0.95rem',
+                                                                        boxSizing: 'border-box',
+                                                                        backgroundColor: (isLocked || isResolved) ? '#f1f5f9' : '#fff',
+                                                                        cursor: (isLocked || isResolved) ? 'not-allowed' : 'text'
+                                                                    }}
+                                                                />
+                                                            </div>
+
+                                                            <div style={{ marginBottom: '16px' }}>
+                                                                <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: '#334155', fontSize: '0.9rem' }}>
+                                                                    Meeting Venue
+                                                                </label>
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="e.g. Room 302, Main Block"
+                                                                    value={editData.meetingVenue || ''}
+                                                                    onChange={(e) => setEditData(prev => ({ ...prev, meetingVenue: e.target.value }))}
+                                                                    disabled={isLocked || isResolved}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '10px 12px',
+                                                                        borderRadius: '8px',
+                                                                        border: '1px solid #cbd5e1',
+                                                                        fontSize: '0.95rem',
+                                                                        boxSizing: 'border-box',
+                                                                        backgroundColor: (isLocked || isResolved) ? '#f1f5f9' : '#fff',
+                                                                        cursor: (isLocked || isResolved) ? 'not-allowed' : 'text'
+                                                                    }}
+                                                                />
+                                                            </div>
+
+                                                            {/* Show current meeting info if set */}
+                                                            {(c.meetingTimeSlot || c.meetingVenue) && (
+                                                                <div style={{
+                                                                    backgroundColor: '#eff6ff',
+                                                                    padding: '10px 14px',
+                                                                    borderRadius: '8px',
+                                                                    marginBottom: '16px',
+                                                                    fontSize: '0.85rem',
+                                                                    border: '1px solid #bfdbfe'
+                                                                }}>
+                                                                    <strong>Current Schedule:</strong><br />
+                                                                    {c.meetingTimeSlot && <span>🕐 {new Date(c.meetingTimeSlot).toLocaleString()}<br /></span>}
+                                                                    {c.meetingVenue && <span>📍 {c.meetingVenue}</span>}
+                                                                </div>
+                                                            )}
+
+                                                            {!isResolved && (
+                                                                <button
+                                                                    onClick={() => handleSave(c.id)}
+                                                                    disabled={saving === c.id}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '12px',
+                                                                        backgroundColor: '#4b6159',
+                                                                        color: 'white',
+                                                                        border: 'none',
+                                                                        borderRadius: '8px',
+                                                                        fontSize: '1rem',
+                                                                        fontWeight: 700,
+                                                                        cursor: saving === c.id ? 'not-allowed' : 'pointer',
+                                                                        opacity: saving === c.id ? 0.7 : 1,
+                                                                        transition: 'all 0.2s',
+                                                                        letterSpacing: '0.5px'
+                                                                    }}
+                                                                >
+                                                                    {saving === c.id ? 'Saving...' : (section.id === 'yet_to_meet' ? '🔄 Update Status' : '💾 Save Changes')}
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
 
-                                                <button
-                                                    onClick={() => handleSave(c.id)}
-                                                    disabled={saving === c.id}
-                                                    style={{
-                                                        width: '100%',
-                                                        padding: '12px',
-                                                        backgroundColor: '#4b6159',
-                                                        color: 'white',
-                                                        border: 'none',
-                                                        borderRadius: '8px',
-                                                        fontSize: '1rem',
-                                                        fontWeight: 700,
-                                                        cursor: saving === c.id ? 'not-allowed' : 'pointer',
-                                                        opacity: saving === c.id ? 0.7 : 1,
-                                                        transition: 'all 0.2s',
-                                                        letterSpacing: '0.5px'
-                                                    }}
-                                                >
-                                                    {saving === c.id ? 'Saving...' : '💾 Save Changes'}
-                                                </button>
+            {/* Student Emotion Overview Card */}
+            <div className="card" style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '30px', padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc' }}>
+                    <h2 style={{ color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.4rem' }}>
+                        <span style={{ fontSize: '1.5rem' }}>📊</span> Student Emotion Overview
+                    </h2>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, backgroundColor: '#fff', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>Live Analytics</span>
+                </div>
+                
+                {cases.length > 0 ? (
+                    <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'minmax(0, 3fr) 1fr', 
+                        gap: '0', 
+                        minHeight: '400px'
+                    }}>
+                        {/* Left Side: Chart */}
+                        <div style={{ padding: '30px 40px', borderRight: '1px solid #f1f5f9' }}>
+                            <div style={{ height: '350px', position: 'relative' }}>
+                                <Bar data={emotionChartData} options={{
+                                    ...chartOptions,
+                                    scales: {
+                                        ...chartOptions.scales,
+                                        y: {
+                                            ...chartOptions.scales.y,
+                                            grace: '20%',
+                                            grid: { display: false },
+                                            ticks: { ...chartOptions.scales.y.ticks, color: '#94a3b8' }
+                                        },
+                                        x: {
+                                            ...chartOptions.scales.x,
+                                            grid: { display: false },
+                                            ticks: { color: '#64748b', font: { weight: '600' } }
+                                        }
+                                    }
+                                }} />
+                            </div>
+                        </div>
+
+                        {/* Right Side: Breakdown List */}
+                        <div style={{ padding: '30px 25px', backgroundColor: '#fff' }}>
+                            <h3 style={{ 
+                                fontSize: '0.75rem', 
+                                color: '#64748b', 
+                                fontWeight: 700, 
+                                textTransform: 'uppercase', 
+                                letterSpacing: '1px',
+                                marginBottom: '25px',
+                                paddingBottom: '10px',
+                                borderBottom: '1px solid #f1f5f9'
+                            }}>
+                                Breakdown
+                            </h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {[
+                                    { emotion: 'Happy', color: '#10b981' },
+                                    { emotion: 'Stressed', color: '#f43f5e' },
+                                    { emotion: 'Anxious', color: '#f59e0b' },
+                                    { emotion: 'Neutral', color: '#64748b' },
+                                    { emotion: 'Sad', color: '#3b82f6' }
+                                ].map((item) => {
+                                    const count = emotionChartData.counts[item.emotion] || 0;
+                                    const isHovered = hoveredBreakdown === item.emotion;
+                                    return (
+                                        <div 
+                                            key={item.emotion} 
+                                            onMouseEnter={() => setHoveredBreakdown(item.emotion)}
+                                            onMouseLeave={() => setHoveredBreakdown(null)}
+                                            style={{ 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                justifyContent: 'space-between',
+                                                padding: '10px 12px',
+                                                borderRadius: '8px',
+                                                transition: 'all 0.25s ease',
+                                                backgroundColor: isHovered ? '#f8fafc' : 'transparent',
+                                                transform: isHovered ? 'translateX(5px)' : 'translateX(0)',
+                                                cursor: 'default'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{ 
+                                                    width: '4px', 
+                                                    height: '24px', 
+                                                    backgroundColor: item.color, 
+                                                    borderRadius: '2px',
+                                                    transition: 'height 0.3s',
+                                                    height: isHovered ? '32px' : '24px'
+                                                }}></div>
+                                                <span style={{ 
+                                                    fontWeight: 600, 
+                                                    color: isHovered ? item.color : '#475569', 
+                                                    fontSize: '0.9rem',
+                                                    transition: 'color 0.3s'
+                                                }}>{item.emotion}</span>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <span style={{ 
+                                                    fontWeight: 800, 
+                                                    color: '#1e293b', 
+                                                    fontSize: isHovered ? '1.25rem' : '1.1rem',
+                                                    transition: 'all 0.3s'
+                                                }}>{count}</span>
+                                                <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Count</div>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
+                                    );
+                                })}
                             </div>
-                        ))}
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{ padding: '60px 0', textAlign: 'center' }}>
+                        <span style={{ fontSize: '3rem', display: 'block', marginBottom: '15px' }}>📈</span>
+                        <p style={{ color: '#94a3b8', fontStyle: 'italic' }}>
+                            No feedback data available yet.
+                        </p>
                     </div>
                 )}
             </div>

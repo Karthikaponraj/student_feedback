@@ -98,7 +98,7 @@ const ForgotPassword = () => {
                 <h2 className="portal-login-title">Step {step}: {step === 1 ? 'Email' : step === 2 ? 'OTP' : 'New Password'}</h2>
 
                 {error && <div className="error-message" style={{ width: '100%' }}>{error}</div>}
-                {message && <div style={{ width: '100%', padding: '12px', borderRadius: '6px', marginBottom: '20px', textAlign: 'center', backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #86efac' }}>{message}</div>}
+                {message && <div style={{ width: '100%', padding: '12px', borderRadius: '6px', marginBottom: '20px', textAlign: 'center', backgroundColor: 'var(--status-resolved)20', color: 'var(--status-resolved)', border: '1px solid var(--status-resolved)40' }}>{message}</div>}
 
                 {step === 1 && (
                     <form onSubmit={handleSendOTP} style={{ width: '100%' }}>
@@ -138,7 +138,7 @@ const ForgotPassword = () => {
                         <button type="submit" className="login-btn-action" disabled={isLoading}>
                             {isLoading ? 'Verifying...' : 'Verify OTP'}
                         </button>
-                        <button type="button" onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#4b6159', textDecoration: 'underline', width: '100%', cursor: 'pointer', marginTop: '10px' }}>
+                        <button type="button" onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: 'var(--primary-slate)', textDecoration: 'underline', width: '100%', cursor: 'pointer', marginTop: '10px', fontWeight: 'bold' }}>
                             Back to Email
                         </button>
                     </form>
@@ -176,9 +176,7 @@ const ForgotPassword = () => {
                     </form>
                 )}
 
-                <div className="register-section" style={{ border: 'none', color: '#4b6159', marginTop: '20px' }}>
-                    <Link to="/login" style={{ color: '#4b6159', textDecoration: 'underline', fontWeight: 'bold' }}>Back to Login</Link>
-                </div>
+                <Link to="/login" style={{ color: 'var(--primary-slate)', textDecoration: 'underline', fontWeight: 'bold' }}>Back to Login</Link>
             </div>
         </div>
     );

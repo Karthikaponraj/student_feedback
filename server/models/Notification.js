@@ -7,7 +7,7 @@ const notificationSchema = new mongoose.Schema({
     message: { type: String, required: true },
     relatedFeedbackId: { type: mongoose.Schema.Types.ObjectId, ref: 'Feedback' },
     isRead: { type: Boolean, default: false },
-    type: { type: String, enum: ['help_request', 'mentor_assigned', 'request_resolved', 'info'], default: 'info' },
+    type: { type: String, enum: ['help_request', 'mentor_assigned', 'request_resolved', 'info', 'assignment'], default: 'info' },
     createdAt: { type: Date, default: Date.now }
 });
 

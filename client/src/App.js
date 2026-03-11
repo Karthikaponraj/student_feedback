@@ -74,7 +74,7 @@ const BackendHealthCheck = () => {
     );
 };
 
-const Navbar = () => {
+const Navbar = ({ theme, toggleTheme }) => {
     const { currentUser, userRole, logout } = useAuth();
 
     if (!currentUser) return null;
@@ -85,32 +85,115 @@ const Navbar = () => {
         if (!currentUser.email) return 'User';
 
         const namePart = currentUser.email.split('@')[0];
-        // Convert to Title Case
         return namePart.charAt(0).toUpperCase() + namePart.slice(1).toLowerCase();
     };
 
     return (
-        <nav className="navbar">
-            <Link to="/" style={{ textDecoration: 'none', color: '#2c3e50' }}>
-                <h1>{userRole === 'admin' ? 'Admin Dashboard' : userRole === 'faculty' ? 'Faculty Dashboard' : 'Feedback Portal'}</h1>
+        <nav className="navbar" style={{
+            top: 0,
+            left: 0,
+            right: 0,
+            width: '100%',
+            borderRadius: 0,
+            margin: 0,
+            backgroundColor: 'var(--card-bg)'
+        }}>
+            <Link to="/" style={{ textDecoration: 'none' }}>
+                <h1 style={{
+                    fontSize: '1.1rem',
+                    letterSpacing: '0.1em',
+                    color: 'var(--primary-slate)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                }}>
+                    <span style={{
+                        backgroundColor: 'var(--primary-slate)',
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        fontSize: '0.9rem'
+                    }}>S</span>
+                    {userRole === 'admin' ? 'ADMIN PANEL' : userRole === 'faculty' ? 'FACULTY PANEL' : 'STUDENT HUB'}
+                </h1>
             </Link>
             <div className="nav-links">
                 <NotificationBell />
-                <span style={{ marginRight: '15px' }}>
-                    Hello, <strong>{getUserName()}</strong>
-                </span>
 
-                <Link to="/profile" title="My Profile" className="nav-icon-link">
-                    <button className="nav-icon-btn">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                            <circle cx="12" cy="7" r="4" />
+                <button
+                    onClick={toggleTheme}
+                    className="nav-icon-btn"
+                    title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+                >
+                    {theme === 'light' ? (
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                         </svg>
-                    </button>
-                </Link>
+                    ) : (
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                        </svg>
+                    )}
+                </button>
 
-                <button onClick={logout} className="nav-icon-btn logout" title="Logout">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <div style={{
+                    height: '24px',
+                    width: '1px',
+                    backgroundColor: 'var(--border-color)',
+                    margin: '0 10px'
+                }}></div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <div style={{
+                            fontSize: '0.85rem',
+                            fontWeight: '700',
+                            color: 'var(--text-main)',
+                            lineHeight: 1.2,
+                            letterSpacing: '0.02em'
+                        }}>{getUserName()}</div>
+                        <div style={{
+                            fontSize: '0.65rem',
+                            color: 'var(--text-secondary)',
+                            fontWeight: '600',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            opacity: 0.8
+                        }}>{userRole}</div>
+                    </div>
+
+                    <Link to="/profile" className="nav-icon-link">
+                        <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            backgroundColor: 'var(--bg-color)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '1px solid var(--border-color)',
+                            color: 'var(--primary-slate)',
+                            transition: 'all 0.2s ease'
+                        }}
+                            onMouseOver={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--primary-slate)';
+                                e.currentTarget.style.backgroundColor = 'var(--primary-slate)10';
+                            }}
+                            onMouseOut={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--border-color)';
+                                e.currentTarget.style.backgroundColor = 'var(--bg-color)';
+                            }}
+                        >
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                        </div>
+                    </Link>
+                </div>
+
+                <button onClick={logout} className="nav-icon-btn logout" style={{ marginLeft: '5px' }}>
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                         <polyline points="16 17 21 12 16 7" />
                         <line x1="21" y1="12" x2="9" y2="12" />
@@ -146,6 +229,17 @@ const DashboardRouter = () => {
 };
 
 function App() {
+    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => {
+        setTheme(prev => prev === 'light' ? 'dark' : 'light');
+    };
+
     return (
         <div className="App">
             <BackendHealthCheck />
@@ -160,7 +254,7 @@ function App() {
                         <Route path="/" element={
                             <ProtectedRoute allowedRoles={['student', 'faculty', 'admin']}>
                                 <>
-                                    <Navbar />
+                                    <Navbar theme={theme} toggleTheme={toggleTheme} />
                                     <DashboardRouter />
                                 </>
                             </ProtectedRoute>
@@ -168,7 +262,7 @@ function App() {
                         <Route path="/profile" element={
                             <ProtectedRoute allowedRoles={['student', 'faculty', 'admin']}>
                                 <>
-                                    <Navbar />
+                                    <Navbar theme={theme} toggleTheme={toggleTheme} />
                                     <Profile />
                                 </>
                             </ProtectedRoute>

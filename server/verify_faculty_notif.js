@@ -8,82 +8,64 @@ const path = require('path');
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 async function verifyFacultyNotification() {
-    console.log("--- VERIFYING FACULTY NOTIFICATION LOGIC ---");
-
     try {
         await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/student_feedback');
-        console.log("Connected to MongoDB.");
 
-        // 1. Setup - Create a faculty user
-        const facultyEmail = `faculty_${Date.now()}@test.com`;
-        const facultyUser = await User.create({
-            email: facultyEmail,
-            password: 'password123', // unhashed for test is fine as we don't login
-            role: 'faculty',
-            name: 'Prof. Test'
-        });
-        console.log(`Created test faculty: ${facultyEmail}`);
+        console.log("--- FINDING TEST DATA ---");
+        const student = await User.findOne({ role: 'student' });
+        const faculty = await User.findOne({ role: 'faculty' });
 
-        // 2. Setup - Create a feedback request
-        const feedback = await Feedback.create({
-            email: 'student@test.com',
-            emotion: 'sad',
+        if (!student || !faculty) {
+            console.error("Missing student or faculty for testing.");
+            process.exit(1);
+        }
+
+        console.log(`Using Student: ${student.email}, Faculty: ${faculty.email}`);
+
+        const testFeedback = new Feedback({
+            student: student._id,
+            email: student.email,
+            emotion: 'Neutral',
+            comment: 'Testing faculty notification',
             helpRequested: true,
             status: 'pending'
         });
-        console.log("Created test feedback request.");
+        await testFeedback.save();
 
-        // 3. Simulate the assignment logic (as implemented in index.js)
-        const mentorName = "Official Mentor";
-        const updateData = {
-            status: 'allocated',
-            assignedMentor: mentorName,
-            assignedFacultyEmail: facultyEmail,
-            assignedAt: new Date()
-        };
+        console.log("--- SIMULATING ALLOCATION ---");
+        const studentName = student.name || student.email.split('@')[0];
 
-        const updatedFeedback = await Feedback.findByIdAndUpdate(
-            feedback._id,
-            updateData,
-            { new: true }
-        );
+        await Notification.create({
+            userId: faculty._id.toString(),
+            role: 'faculty',
+            title: 'New Student Assigned',
+            message: `${studentName} is allocated to you.`,
+            relatedFeedbackId: testFeedback._id,
+            type: 'assignment'
+        });
 
-        // 4. Manual trigger of the notification logic (replicating index.js code)
-        console.log("Simulating notification creation...");
-        const facUser = await User.findOne({ email: facultyEmail });
-        if (facUser) {
-            const studentName = updatedFeedback.student ? "Named Student" : updatedFeedback.email.split('@')[0];
-            await Notification.create({
-                userId: facUser._id.toString(),
-                role: 'faculty',
-                title: 'New Student Assigned',
-                message: `A new student (${studentName}) has been assigned to you.`,
-                relatedFeedbackId: updatedFeedback._id,
-                type: 'mentor_assigned'
-            });
-        }
+        console.log("--- VERIFYING NOTIFICATION ---");
+        const notif = await Notification.findOne({
+            userId: faculty._id.toString(),
+            type: 'assignment'
+        }).sort({ createdAt: -1 });
 
-        // 5. Check if notification exists
-        const notification = await Notification.findOne({ userId: facultyUser._id.toString(), role: 'faculty' });
-
-        if (notification && notification.title === 'New Student Assigned') {
-            console.log("✅ SUCCESS: Faculty notification created successfully.");
-            console.log("Message:", notification.message);
+        if (notif && notif.message === `${studentName} is allocated to you.`) {
+            console.log("✅ SUCCESS: Notification message matches!");
+            console.log("Message:", notif.message);
         } else {
-            console.error("❌ FAILURE: Faculty notification not found.");
+            console.log("❌ FAILURE: Notification message mismatch or not found.");
+            if (notif) console.log("Found message:", notif.message);
         }
 
         // Cleanup
-        await User.deleteOne({ _id: facultyUser._id });
-        await Feedback.deleteOne({ _id: feedback._id });
-        await Notification.deleteMany({ userId: facultyUser._id.toString() });
-        console.log("Cleanup complete.");
+        await Feedback.findByIdAndDelete(testFeedback._id);
+        await Notification.findByIdAndDelete(notif._id);
 
     } catch (err) {
-        console.error("Test Error:", err);
+        console.error(err);
     } finally {
         await mongoose.disconnect();
-        console.log("Disconnected.");
     }
 }
 

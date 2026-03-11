@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../utils/apiClient';
+import { useAuth } from '../context/AuthContext';
 
 const StudentDashboard = () => {
     const [emotion, setEmotion] = useState('');
@@ -19,6 +20,112 @@ const StudentDashboard = () => {
     const [message, setMessage] = useState({ text: '', type: '' });
     const [lastEmotion, setLastEmotion] = useState(null);
     const [detailsSubmitted, setDetailsSubmitted] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    // Additional restored fields
+    const [emotionDomain, setEmotionDomain] = useState('');
+    const [emotionDuration, setEmotionDuration] = useState('');
+    const [lifeImpactScore, setLifeImpactScore] = useState(3);
+    const [selectedTriggers, setSelectedTriggers] = useState([]);
+
+    const REASONS_TO_TRIGGERS = {
+        'Academics': [
+            'Difficulty understanding course concepts',
+            'Heavy assignment workload',
+            'Low marks in internal assessments',
+            'Struggling to balance multiple subjects',
+            'Other'
+        ],
+        'Exam Pressure': [
+            'Upcoming semester exams',
+            'Fear of failing exams',
+            'Last-minute exam preparation',
+            'Multiple exams scheduled close together',
+            'Other'
+        ],
+        'PS Assessments': [
+            'Difficult Questions',
+            'Failed Testcases',
+            'Result Anxiety',
+            'Skill Gap',
+            'Other'
+        ],
+        'Placements': [
+            'Placement interview preparation',
+            'Fear of not getting placed',
+            'High competition among students',
+            'Rejection in placement interviews',
+            'Other'
+        ],
+        'Reward / Performance Points': [
+            'Low RP',
+            'Redemption Date is Nearing',
+            'Couldn\'t Able to Score Average RP',
+            'Fear of Internal Marks',
+            'Other'
+        ],
+        'Personal / Family Issues': [
+            'Family conflicts or disagreements',
+            'Homesickness',
+            'Family health problems',
+            'Personal relationship issues',
+            'Other'
+        ],
+        'Physical Health': [
+            'Illness affecting daily activities',
+            'Lack of sleep or fatigue',
+            'Frequent headaches or body pain',
+            'Difficulty maintaining a healthy routine',
+            'Other'
+        ],
+        'Financial Issues': [
+            'Difficulty paying college fees',
+            'Family financial problems',
+            'Education loan pressure',
+            'Lack of funds for study materials',
+            'Other'
+        ],
+        'Friends / Social Life': [
+            'Conflict with friends',
+            'Feeling isolated from peers',
+            'Difficulty making new friends',
+            'Peer pressure in social situations',
+            'Other'
+        ],
+        'Faculty Related': [
+            'Difficulty communicating with faculty',
+            'Strict evaluation or grading',
+            'Lack of academic guidance',
+            'Fear of approaching faculty for help',
+            'Other'
+        ]
+    };
+
+    const HAPPY_REASONS = [
+        "Academic Achievement",
+        "Placement / Internship Success",
+        "Good Exam Results",
+        "Faculty Appreciation",
+        "Personal Achievement",
+        "Participation in Events or Competitions",
+        "Family Support or Good News",
+        "Friends or Social Activities",
+        "Skill Development or Learning Something New",
+        "Recognition or Awards"
+    ];
+    
+    // Happy specific fields
+    const [outcomeOfHappiness, setOutcomeOfHappiness] = useState('');
+    const [suggestToOthers, setSuggestToOthers] = useState('');
+    const [suggestionText, setSuggestionText] = useState('');
+    
+    const { currentUser } = useAuth();
+
+    useEffect(() => {
+        if (currentUser && currentUser.email) {
+            setStudentDetails(prev => ({ ...prev, email: currentUser.email }));
+        }
+    }, [currentUser]);
 
     const validateDetails = () => {
         const { name, regno, department, batch, email, mobile, place } = studentDetails;
@@ -31,12 +138,46 @@ const StudentDashboard = () => {
     };
 
     const validateForm = () => {
-        return detailsSubmitted && emotion && comment.trim();
+        if (!detailsSubmitted || !emotion || !comment.trim() || !emotionDomain.trim() || !emotionDuration) {
+            return false;
+        }
+
+        if (emotion === 'Happy') {
+            if (!outcomeOfHappiness.trim() || !suggestToOthers) return false;
+            if (suggestToOthers === 'Yes' && !suggestionText.trim()) return false;
+        } else {
+            // Require at least one trigger for other emotions if a reason is selected
+            if (REASONS_TO_TRIGGERS[emotionDomain] && selectedTriggers.length === 0) return false;
+        }
+
+        return true;
     };
 
     const handleDetailChange = (e) => {
         const { name, value } = e.target;
         setStudentDetails(prev => ({ ...prev, [name]: value }));
+    };
+
+    const checkDetails = async () => {
+        console.log("🔍 Checking if student details exist...");
+        try {
+            const data = await apiClient('/student-details/me');
+            if (data && data.email) {
+                console.log("✅ Student details found!", data);
+                setStudentDetails(data);
+                setDetailsSubmitted(true);
+            } else {
+                console.log("ℹ️ No student details found on file.");
+            }
+        } catch (error) {
+            if (error.status === 404) {
+                console.log("ℹ️ Student details not found (404).");
+            } else {
+                console.error("❌ Error checking student details:", error);
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
     const fetchHistory = async () => {
@@ -52,6 +193,7 @@ const StudentDashboard = () => {
     };
 
     useEffect(() => {
+        checkDetails();
         fetchHistory();
     }, []);
 
@@ -86,6 +228,13 @@ const StudentDashboard = () => {
                     emotion,
                     comment,
                     emotion_intensity: emotionIntensity,
+                    emotion_domain: emotionDomain,
+                    emotion_duration: emotionDuration,
+                    life_impact_score: lifeImpactScore,
+                    emotion_triggers: selectedTriggers,
+                    outcome_of_happiness: outcomeOfHappiness,
+                    suggest_to_others: suggestToOthers,
+                    suggestion_text: suggestionText,
                     helpRequested: requestHelp
                 })
             });
@@ -95,6 +244,13 @@ const StudentDashboard = () => {
             setEmotionIntensity(3);
             setRequestHelp(false);
             setComment('');
+            setEmotionDomain('');
+            setSelectedTriggers([]);
+            setEmotionDuration('');
+            setLifeImpactScore(3);
+            setOutcomeOfHappiness('');
+            setSuggestToOthers('');
+            setSuggestionText('');
             fetchHistory();
             setTimeout(() => setMessage({ text: '', type: '' }), 3000);
         } catch (error) {
@@ -142,99 +298,115 @@ const StudentDashboard = () => {
         }
     };
 
+    if (loading) {
+        return (
+            <div className="container" style={{ textAlign: 'center', paddingTop: '100px' }}>
+                <div className="loader">Loading...</div>
+                <p>Checking your profile status...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="container" style={{ paddingTop: '20px' }}>
-
             {lastEmotion && (
                 <div style={{
                     backgroundColor: '#fff',
-                    padding: '10px 20px',
-                    borderRadius: '20px',
-                    display: 'inline-block',
+                    padding: '10px 22px',
+                    borderRadius: '50px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
                     marginBottom: '20px',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                    borderLeft: `4px solid ${getEmotionColor(lastEmotion.emotion)}`
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    border: '1px solid #e2e8f0',
+                    borderLeft: `5px solid ${getEmotionColor(lastEmotion.emotion)}`
                 }}>
-                    <strong>Last Check-in:</strong> {lastEmotion.emotion} <span style={{ fontSize: '0.8rem', color: '#666' }}>({lastEmotion.date})</span>
+                    <span style={{ fontWeight: 700, fontSize: '1rem', color: '#1e293b' }}>Last Check-in:</span> 
+                    <span style={{ marginLeft: '10px', fontSize: '1.1rem', color: '#475569', fontWeight: 600 }}>{lastEmotion.emotion}</span>
+                    <span style={{ marginLeft: '12px', fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>({lastEmotion.date})</span>
                 </div>
             )}
 
-            {/* Student Details Section */}
-            <div className="card" style={{ marginBottom: '30px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                <h2 style={{ borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', marginBottom: '20px' }}>Student Details</h2>
-                {detailsSubmitted ? (
-                    <div style={{ textAlign: 'center', padding: '30px 10px', animation: 'fadeIn 0.5s' }}>
-                        <div style={{ fontSize: '3.5rem', marginBottom: '15px' }}>✅</div>
-                        <h3 style={{ color: '#50c878', margin: '0 0 10px 0' }}>Details Registered</h3>
-                        <p style={{ color: '#64748b', fontSize: '0.95rem', margin: '0' }}>
-                            Your information has been saved. Please proceed with your emotional feedback below.
-                        </p>
-                    </div>
-                ) : (
-                    <>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                            <div className="form-group">
-                                <label>Full Name *</label>
-                                <input name="name" value={studentDetails.name} onChange={handleDetailChange} placeholder="Enter your full name" required />
-                            </div>
-                            <div className="form-group">
-                                <label>Register Number *</label>
-                                <input name="regno" value={studentDetails.regno} onChange={handleDetailChange} placeholder="No special characters" required />
-                                {studentDetails.regno && !/^[a-zA-Z0-9]+$/.test(studentDetails.regno) && <span style={{ color: 'red', fontSize: '0.8rem' }}>Invalid format</span>}
-                            </div>
-                            <div className="form-group">
-                                <label>Department *</label>
-                                <select name="department" value={studentDetails.department} onChange={handleDetailChange} required>
-                                    <option value="">Select Department</option>
-                                    <optgroup label="B.E. (Bachelor of Engineering)">
-                                        <option value="BE-CIVIL">B.E. Civil Engineering</option>
-                                        <option value="BE-MECH">B.E. Mechanical Engineering</option>
-                                        <option value="BE-EEE">B.E. Electrical Engineering</option>
-                                        <option value="BE-AGRI">B.E. Agricultural Engineering</option>
-                                        <option value="BE-ECE">B.E. Electronics and Communication Engineering (ECE)</option>
-                                        <option value="BE-CSE">B.E. Computer Science and Engineering (CSE)</option>
-                                    </optgroup>
-                                    <optgroup label="B.Tech. (Bachelor of Technology)">
-                                        <option value="BTECH-CSBS">B.Tech. Computer Science and Business Systems</option>
-                                        <option value="BTECH-IT">B.Tech. Information Technology (IT)</option>
-                                        <option value="BTECH-AIDS">B.Tech. Artificial Intelligence & Data Science</option>
-                                        <option value="BTECH-FOOD">B.Tech. Food Technology / Food Engineering</option>
-                                        <option value="BTECH-BIOTECH">B.Tech. Biotechnology</option>
-                                    </optgroup>
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label>Batch *</label>
-                                <input name="batch" value={studentDetails.batch} onChange={handleDetailChange} placeholder="e.g. 2021-2025" required />
-                            </div>
-                            <div className="form-group">
-                                <label>Email Address *</label>
-                                <input type="email" name="email" value={studentDetails.email} onChange={handleDetailChange} placeholder="Valid email required" required />
-                            </div>
-                            <div className="form-group">
-                                <label>Mobile Number *</label>
-                                <input type="tel" name="mobile" value={studentDetails.mobile} onChange={handleDetailChange} placeholder="10 digits" required />
-                                {studentDetails.mobile && !/^\d{10}$/.test(studentDetails.mobile) && <span style={{ color: 'red', fontSize: '0.8rem' }}>Must be 10 digits</span>}
-                            </div>
-                            <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                                <label>Place *</label>
-                                <input name="place" value={studentDetails.place} onChange={handleDetailChange} placeholder="City/Town" required />
-                            </div>
-                        </div>
-                        <button
-                            type="button"
-                            className="btn"
-                            onClick={handleDetailsSubmit}
-                            disabled={!validateDetails()}
-                            style={{ marginTop: '20px', backgroundColor: '#50c878', opacity: !validateDetails() ? 0.6 : 1 }}
-                        >
-                            Submit Details
-                        </button>
-                    </>
-                )}
+            <div style={{ textAlign: 'left', marginBottom: '35px' }}>
+                <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--primary-slate)', marginBottom: '4px' }}>Emotional Wellbeing Form</h1>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>Help us understand how you're doing today.</p>
             </div>
 
-            <hr style={{ border: '0', borderTop: '1px solid #e2e8f0', margin: '40px 0' }} />
+            {/* Student Details Section - Only show if not submitted */}
+            {!detailsSubmitted && (
+                <div className="card" style={{ marginBottom: '30px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+                    <h2 style={{ borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', marginBottom: '20px' }}>Student Details</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        <div className="form-group">
+                            <label>Full Name *</label>
+                            <input name="name" value={studentDetails.name} onChange={handleDetailChange} placeholder="Enter your full name" required />
+                        </div>
+                        <div className="form-group">
+                            <label>Register Number *</label>
+                            <input name="regno" value={studentDetails.regno} onChange={handleDetailChange} placeholder="No special characters" required />
+                            {studentDetails.regno && !/^[a-zA-Z0-9]+$/.test(studentDetails.regno) && <span style={{ color: 'red', fontSize: '0.8rem' }}>Invalid format</span>}
+                        </div>
+                        <div className="form-group">
+                            <label>Department *</label>
+                            <select name="department" value={studentDetails.department} onChange={handleDetailChange} required>
+                                <option value="">Select Department</option>
+                                <optgroup label="B.E. (Bachelor of Engineering)">
+                                    <option value="BE-CIVIL">B.E. Civil Engineering</option>
+                                    <option value="BE-MECH">B.E. Mechanical Engineering</option>
+                                    <option value="BE-EEE">B.E. Electrical Engineering</option>
+                                    <option value="BE-AGRI">B.E. Agricultural Engineering</option>
+                                    <option value="BE-ECE">B.E. Electronics and Communication Engineering (ECE)</option>
+                                    <option value="BE-CSE">B.E. Computer Science and Engineering (CSE)</option>
+                                </optgroup>
+                                <optgroup label="B.Tech. (Bachelor of Technology)">
+                                    <option value="BTECH-CSBS">B.Tech. Computer Science and Business Systems</option>
+                                    <option value="BTECH-IT">B.Tech. Information Technology (IT)</option>
+                                    <option value="BTECH-AIDS">B.Tech. Artificial Intelligence & Data Science</option>
+                                    <option value="BTECH-FOOD">B.Tech. Food Technology / Food Engineering</option>
+                                    <option value="BTECH-BIOTECH">B.Tech. Biotechnology</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label>Batch *</label>
+                            <input name="batch" value={studentDetails.batch} onChange={handleDetailChange} placeholder="e.g. 2021-2025" required />
+                        </div>
+                        <div className="form-group">
+                            <label>Email Address *</label>
+                            <input 
+                                type="email" 
+                                name="email" 
+                                value={studentDetails.email} 
+                                onChange={handleDetailChange} 
+                                placeholder="Valid email required" 
+                                required 
+                                readOnly={!!currentUser?.email}
+                                style={{ backgroundColor: currentUser?.email ? '#f8fafc' : undefined, color: currentUser?.email ? '#64748b' : undefined }}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Mobile Number *</label>
+                            <input type="tel" name="mobile" value={studentDetails.mobile} onChange={handleDetailChange} placeholder="10 digits" required />
+                            {studentDetails.mobile && !/^\d{10}$/.test(studentDetails.mobile) && <span style={{ color: 'red', fontSize: '0.8rem' }}>Must be 10 digits</span>}
+                        </div>
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                            <label>Place *</label>
+                            <input name="place" value={studentDetails.place} onChange={handleDetailChange} placeholder="City/Town" required />
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        className="btn"
+                        onClick={handleDetailsSubmit}
+                        disabled={!validateDetails()}
+                        style={{ marginTop: '20px', backgroundColor: '#50c878', opacity: !validateDetails() ? 0.6 : 1 }}
+                    >
+                        Submit Details
+                    </button>
+                </div>
+            )}
+
+            {!detailsSubmitted && <hr style={{ border: '0', borderTop: '1px solid #e2e8f0', margin: '40px 0' }} />}
 
             <div className={`card ${!detailsSubmitted ? 'disabled-section' : ''}`} style={{ opacity: detailsSubmitted ? 1 : 0.6, pointerEvents: detailsSubmitted ? 'auto' : 'none' }}>
                 <h2 style={{ color: detailsSubmitted ? '#2c3e50' : '#94a3b8' }}>How are you feeling today?</h2>
@@ -264,6 +436,10 @@ const StudentDashboard = () => {
                                     onClick={() => {
                                         setEmotion(e);
                                         setEmotionIntensity(3);
+                                        setEmotionDomain('');
+                                        setOutcomeOfHappiness('');
+                                        setSuggestToOthers('');
+                                        setSuggestionText('');
                                     }}
                                     title={emotionTooltips[e]}
                                     style={{
@@ -342,6 +518,161 @@ const StudentDashboard = () => {
                                     </label>
                                 </div>
                             )}
+
+                            {/* Additional Required Fields */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label>What is mainly affecting you today? *</label>
+                                    <select 
+                                        value={emotionDomain}
+                                        onChange={(e) => {
+                                            setEmotionDomain(e.target.value);
+                                            setSelectedTriggers([]); // Reset triggers when reason changes
+                                        }}
+                                        style={{ borderColor: !emotionDomain ? '#ffcc00' : undefined }}
+                                        required
+                                    >
+                                        <option value="">Select Primary Cause</option>
+                                        {emotion === 'Happy' ? (
+                                            HAPPY_REASONS.map(reason => (
+                                                <option key={reason} value={reason}>{reason}</option>
+                                            ))
+                                        ) : (
+                                            Object.keys(REASONS_TO_TRIGGERS).map(reason => (
+                                                <option key={reason} value={reason}>{reason}</option>
+                                            ))
+                                        )}
+                                    </select>
+                                </div>
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label>How long have you been feeling this? *</label>
+                                    <select 
+                                        value={emotionDuration} 
+                                        onChange={(e) => setEmotionDuration(e.target.value)}
+                                        required
+                                    >
+                                        <option value="">Select Duration</option>
+                                        <option value="Few hours">Few hours</option>
+                                        <option value="Today">Today</option>
+                                        <option value="2-3 days">2-3 days</option>
+                                        <option value="1 week">1 week</option>
+                                        <option value="More than a week">More than a week</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Dynamic Triggers Section */}
+                            {emotion !== 'Happy' && emotionDomain && REASONS_TO_TRIGGERS[emotionDomain] && (
+                                <div className="form-group" style={{ 
+                                    animation: 'fadeIn 0.4s ease-out', 
+                                    backgroundColor: '#f8fafc', 
+                                    padding: '15px', 
+                                    borderRadius: '8px',
+                                    border: '1px solid #e2e8f0',
+                                    marginBottom: '20px'
+                                }}>
+                                    <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#1e293b' }}>
+                                        What specifically triggered this? (Select all that apply) *
+                                    </label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                        {REASONS_TO_TRIGGERS[emotionDomain].map(trigger => (
+                                            <label key={trigger} style={{ 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                gap: '8px', 
+                                                fontSize: '0.9rem',
+                                                cursor: 'pointer',
+                                                padding: '5px'
+                                            }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={selectedTriggers.includes(trigger)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedTriggers(prev => [...prev, trigger]);
+                                                        } else {
+                                                            setSelectedTriggers(prev => prev.filter(t => t !== trigger));
+                                                        }
+                                                    }}
+                                                    style={{ width: '16px', height: '16px' }}
+                                                />
+                                                {trigger}
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            <div className="form-group" style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontWeight: 'bold' }}>
+                                        How much is this affecting your daily life? (1-5)
+                                    </span>
+                                </label>
+                                <input
+                                    type="range"
+                                    min="1"
+                                    max="5"
+                                    value={lifeImpactScore}
+                                    onChange={(e) => setLifeImpactScore(Number(e.target.value))}
+                                    style={{ width: '100%', cursor: 'pointer' }}
+                                />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#666' }}>
+                                    <span>Minimal Impact</span>
+                                    <span>Major Impact</span>
+                                </div>
+                            </div>
+
+                            {/* Happy Emotion Custom Form Logic */}
+                            {emotion === 'Happy' && (
+                                <div style={{ padding: '20px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', marginBottom: '20px' }}>
+                                    <h3 style={{ color: '#166534', marginTop: 0, marginBottom: '15px', fontSize: '1.1rem' }}>Share your happiness</h3>
+                                    <div className="form-group">
+                                        <label>Outcome of happiness: *</label>
+                                        <input 
+                                            type="text"
+                                            value={outcomeOfHappiness}
+                                            onChange={(e) => setOutcomeOfHappiness(e.target.value)}
+                                            placeholder="What positive outcome did this lead to?"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Would you suggest this to others? *</label>
+                                        <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                                <input 
+                                                    type="radio" 
+                                                    name="suggestToOthers" 
+                                                    value="Yes" 
+                                                    checked={suggestToOthers === 'Yes'}
+                                                    onChange={(e) => setSuggestToOthers(e.target.value)}
+                                                /> Yes
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                                <input 
+                                                    type="radio" 
+                                                    name="suggestToOthers" 
+                                                    value="No" 
+                                                    checked={suggestToOthers === 'No'}
+                                                    onChange={(e) => setSuggestToOthers(e.target.value)}
+                                                /> No
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {suggestToOthers === 'Yes' && (
+                                        <div className="form-group" style={{ animation: 'fadeIn 0.3s ease' }}>
+                                            <label>Suggestion: *</label>
+                                            <textarea 
+                                                rows="2"
+                                                value={suggestionText}
+                                                onChange={(e) => setSuggestionText(e.target.value)}
+                                                placeholder="What is your suggestion for others?"
+                                                required
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -382,39 +713,36 @@ const StudentDashboard = () => {
                     <table className="table">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Emotion</th>
-                                <th>Intensity</th>
-                                <th>Current Status</th>
-                                <th>Faculty/Mentor</th>
-                                <th>Time & Venue</th>
-                                <th>Comment</th>
+                                 <th style={{ whiteSpace: 'nowrap' }}>DATE</th>
+                                 <th style={{ whiteSpace: 'nowrap' }}>EMOTION</th>
+                                 <th>INTENSITY</th>
+                                 <th>STATUS</th>
+                                 <th>FACULTY/MENTOR</th>
+                                 <th style={{ whiteSpace: 'nowrap' }}>TIME & VENUE</th>
+                                 <th>COMMENT</th>
                             </tr>
                         </thead>
                         <tbody>
                             {history.map(item => (
                                 <tr key={item.id || item._id || Math.random()}>
-                                    <td>{item.date}</td>
+                                    <td style={{ whiteSpace: 'nowrap' }}>{item.date || '--'}</td>
+                                    <td style={{ whiteSpace: 'nowrap' }}>
+                                         <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', whiteSpace: 'nowrap' }}>
+                                             {item.emotion === 'Happy' && '😊'}
+                                             {item.emotion === 'Stressed' && '😫'}
+                                             {item.emotion === 'Anxious' && '😰'}
+                                             {item.emotion === 'Neutral' && '😐'}
+                                             {item.emotion === 'Sad' && '😢'}
+                                             {item.emotion}
+                                         </span>
+                                     </td>
+                                    <td>{item.emotion_intensity ? `${item.emotion_intensity}/5` : '--'}</td>
                                     <td>
-                                        <span style={{
-                                            padding: '4px 8px',
-                                            borderRadius: '12px',
-                                            backgroundColor: `${getEmotionColor(item.emotion)}20`,
-                                            color: getEmotionColor(item.emotion),
-                                            border: `1px solid ${getEmotionColor(item.emotion)}`,
-                                            fontWeight: 'bold'
-                                        }}>
-                                            {item.emotion}
-                                        </span>
-                                    </td>
-                                    <td>{item.emotion_intensity ? `${item.emotion_intensity} / 5` : '-'}</td>
-                                    <td>
-                                        {/* Current Status Column */}
                                         {item.helpRequested ? (
                                             <>
                                                 {(!item.status || item.status === 'pending' || item.status === 'none') && (
-                                                    <span style={{ color: '#d97706', fontWeight: 'bold' }}>
-                                                        🆘 Pending
+                                                    <span style={{ color: '#d32f2f', fontWeight: 'bold' }}>
+                                                        Pending
                                                     </span>
                                                 )}
                                                 {(['allocated', 'yet_to_meet', 'ongoing'].includes(item.status)) && (
@@ -438,38 +766,42 @@ const StudentDashboard = () => {
                                                 )}
                                             </>
                                         ) : (
-                                            <span style={{ color: '#9ca3af' }}>—</span>
+                                            <span style={{ color: '#9ca3af' }}>--</span>
                                         )}
                                     </td>
                                     <td>
                                         {/* Faculty/Mentor Column */}
                                         {item.helpRequested ? (
                                             <span style={{ fontSize: '0.9rem', color: '#334155', fontWeight: '500' }}>
-                                                {item.assignedFacultyName || item.assignedMentor || (item.assignedFacultyEmail ? item.assignedFacultyEmail.split('@')[0] : '—')}
+                                                {item.assignedFacultyName || item.assignedMentor || (item.assignedFacultyEmail ? item.assignedFacultyEmail.split('@')[0] : '--')}
                                             </span>
                                         ) : (
-                                            <span style={{ color: '#9ca3af' }}>—</span>
+                                            <span style={{ color: '#9ca3af' }}>--</span>
                                         )}
                                     </td>
-                                    <td>
-                                        {/* Time & Venue Column */}
-                                        {(item.meetingTimeSlot || item.meetingVenue) ? (
-                                            <div style={{
-                                                padding: '8px',
-                                                background: '#eff6ff',
-                                                borderRadius: '8px',
-                                                fontSize: '0.8rem',
-                                                border: '1px solid #bfdbfe',
-                                                maxWidth: '180px'
-                                            }}>
-                                                {item.meetingTimeSlot && <span>🕐 {new Date(item.meetingTimeSlot).toLocaleString()}<br /></span>}
-                                                {item.meetingVenue && <span>📍 {item.meetingVenue}</span>}
-                                            </div>
-                                        ) : (
-                                            <span style={{ color: '#9ca3af' }}>—</span>
-                                        )}
+                                     <td style={{ whiteSpace: 'nowrap' }}>
+                                         {/* Time & Venue Column */}
+                                         {(item.meetingTimeSlot || item.meetingVenue) ? (
+                                             <div style={{
+                                                 padding: '8px',
+                                                 background: '#eff6ff',
+                                                 borderRadius: '8px',
+                                                 fontSize: '0.8rem',
+                                                 border: '1px solid #bfdbfe',
+                                                 display: 'inline-flex',
+                                                 alignItems: 'center',
+                                                 gap: '12px',
+                                                 whiteSpace: 'nowrap'
+                                             }}>
+                                                 {item.meetingTimeSlot && <span>🕐 {new Date(item.meetingTimeSlot).toLocaleString()}</span>}
+                                                 {item.meetingTimeSlot && item.meetingVenue && <span style={{ color: '#bfdbfe' }}>|</span>}
+                                                 {item.meetingVenue && <span>📍 {item.meetingVenue}</span>}
+                                             </div>
+                                         ) : (
+                                             <span style={{ color: '#9ca3af' }}>--</span>
+                                         )}
                                     </td>
-                                    <td>{item.comment}</td>
+                                    <td>{item.comment || '--'}</td>
                                 </tr>
                             ))}
                         </tbody>

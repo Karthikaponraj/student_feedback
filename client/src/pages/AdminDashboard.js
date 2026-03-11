@@ -1,13 +1,227 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../utils/apiClient';
 import SummaryCard from '../components/SummaryCard';
 import AssignMentorModal from '../components/AssignMentorModal';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
-import { Pie, Bar } from 'react-chartjs-2';
+import { Doughnut, Bar } from 'react-chartjs-2';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
+import FeedbackReports from './FeedbackReports';
 
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, ChartDataLabels);
+
+
+const DetailedEmotionReasonAnalytics = ({ filteredFeedbacks, onShowStudents }) => {
+    const [expandedEmotions, setExpandedEmotions] = useState({
+        Happy: true,
+        Stressed: true,
+        Anxious: false,
+        Neutral: false,
+        Sad: false
+    });
+
+    const { emotionCounts, detailedCounts } = useMemo(() => {
+        const counts = { Happy: 0, Stressed: 0, Anxious: 0, Neutral: 0, Sad: 0 };
+        const detailed = {};
+
+        filteredFeedbacks.forEach(item => {
+            const emotion = item.emotion;
+            if (counts[emotion] !== undefined) {
+                counts[emotion]++;
+
+                if (!detailed[emotion]) {
+                    detailed[emotion] = { count: 0, domains: {} };
+                }
+                const d = detailed[emotion];
+                d.count++;
+
+                const reason = item.emotion_domain || 'Unspecified';
+                if (!d.domains[reason]) {
+                    d.domains[reason] = { count: 0, students: [] };
+                }
+                d.domains[reason].count++;
+                
+                // Track record for drill-down
+                d.domains[reason].students.push({
+                    name: item.studentName || 'Unknown',
+                    id: item.regno || '—',
+                    department: item.department || '—',
+                    emotion: emotion,
+                    reason: reason,
+                    date: new Date(item.dateObj || item.date).toLocaleDateString()
+                });
+            }
+        });
+        return { emotionCounts: counts, detailedCounts: detailed };
+    }, [filteredFeedbacks]);
+
+    const handleExportExcel = () => {
+        // Sheet 1: Emotion Summary
+        const emotionSummary = Object.entries(emotionCounts).map(([emotion, count]) => ({
+            Emotion: emotion,
+            'Total Students': count
+        }));
+
+        // Sheet 2: Reason Summary
+        const reasonSummary = [];
+        Object.entries(detailedCounts).forEach(([emotion, eData]) => {
+            Object.entries(eData.domains).forEach(([reason, rData]) => {
+                reasonSummary.push({
+                    Emotion: emotion,
+                    Reason: reason,
+                    'Student Count': rData.count
+                });
+            });
+        });
+
+        // Sheet 3: Student Details
+        const studentDetails = [];
+        Object.entries(detailedCounts).forEach(([emotion, eData]) => {
+            Object.entries(eData.domains).forEach(([reason, rData]) => {
+                rData.students.forEach(s => {
+                    studentDetails.push({
+                        'Student Name': s.name,
+                        'Roll No': s.id,
+                        Domain: s.department,
+                        Emotion: emotion,
+                        Reason: reason,
+                        Date: s.date
+                    });
+                });
+            });
+        });
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(emotionSummary), 'Emotion Summary');
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reasonSummary), 'Reason Summary');
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(studentDetails), 'Student Details');
+        XLSX.writeFile(wb, 'emotion_reason_analytics.xlsx');
+    };
+
+    return (
+        <div className="card" style={{ marginTop: '30px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
+                <div>
+                    <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: 'var(--text-main)' }}>Emotion Reason Analytics</h2>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', margin: 0 }}>Progress visualization with student drill-down and reports.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button className="btn" onClick={handleExportExcel} style={{ 
+                        width: 'auto', 
+                        padding: '10px 20px', 
+                        fontSize: '0.95rem', 
+                        backgroundColor: 'var(--success-green)',
+                        fontWeight: '700',
+                        boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)'
+                    }}>
+                        Export Reason Details (Excel)
+                    </button>
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {Object.keys(emotionCounts).map(emotion => {
+                    const count = emotionCounts[emotion] || 0;
+                    if (count === 0) return null;
+
+                    const emotionStyles = {
+                        Happy: { emoji: '😊', color: '#10b981', bg: 'rgba(16, 185, 129, 0.05)', border: 'rgba(16, 185, 129, 0.1)' },
+                        Stressed: { emoji: '😫', color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.05)', border: 'rgba(244, 63, 94, 0.1)' },
+                        Anxious: { emoji: '😰', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.05)', border: 'rgba(245, 158, 11, 0.1)' },
+                        Neutral: { emoji: '😐', color: '#64748b', bg: 'rgba(100, 116, 139, 0.05)', border: 'rgba(100, 116, 139, 0.1)' },
+                        Sad: { emoji: '😢', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.05)', border: 'rgba(59, 130, 246, 0.1)' }
+                    };
+                    const style = emotionStyles[emotion] || emotionStyles.Neutral;
+                    const isOpen = expandedEmotions[emotion];
+                    const detailed = detailedCounts[emotion] || { domains: {}, count: 0 };
+
+                    return (
+                        <div key={emotion} style={{
+                            backgroundColor: 'var(--bg-color)',
+                            border: `1px solid ${style.border}`,
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            transition: 'all 0.3s'
+                        }}>
+                            <div
+                                onClick={() => setExpandedEmotions(prev => ({ ...prev, [emotion]: !prev[emotion] }))}
+                                style={{
+                                    padding: '16px 20px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    cursor: 'pointer',
+                                    backgroundColor: style.bg
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <span style={{ fontSize: '1.5rem' }}>{style.emoji}</span>
+                                    <span style={{ fontWeight: 'bold', color: 'var(--text-main)', fontSize: '1.1rem' }}>{emotion}</span>
+                                    <span style={{ color: style.color, fontSize: '0.9rem', fontWeight: 600 }}>
+                                        {count} Student{count !== 1 ? 's' : ''}
+                                    </span>
+                                </div>
+                                <div style={{
+                                    transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                                    transition: 'transform 0.3s',
+                                    color: style.color
+                                }}>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <div style={{
+                                maxHeight: isOpen ? '1000px' : '0',
+                                opacity: isOpen ? 1 : 0,
+                                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                overflow: 'hidden'
+                            }}>
+                                <div style={{ padding: '20px' }}>
+                                    <h4 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Reason Distribution</h4>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                        {Object.entries(detailed.domains).length > 0 ? (
+                                            Object.entries(detailed.domains)
+                                                .sort((a, b) => b[1].count - a[1].count)
+                                                .map(([reason, reasonData]) => {
+                                                    const percentage = Math.round((reasonData.count / count) * 100);
+                                                    return (
+                                                        <div key={reason} title="Click to view students" onClick={() => onShowStudents(reason, emotion, reasonData.students)} style={{ cursor: 'pointer' }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.9rem' }}>
+                                                                <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>{reason}</span>
+                                                                <span style={{ color: 'var(--text-secondary)' }}>{percentage}% ({reasonData.count} Student{reasonData.count !== 1 ? 's' : ''})</span>
+                                                            </div>
+                                                            <div style={{ height: '10px', backgroundColor: 'var(--border-color)', borderRadius: '5px', overflow: 'hidden' }}>
+                                                                <div style={{
+                                                                    height: '100%',
+                                                                    width: `${percentage}%`,
+                                                                    backgroundColor: style.color,
+                                                                    borderRadius: '5px',
+                                                                    transition: 'width 0.8s ease-out',
+                                                                    boxShadow: `0 0 10px ${style.color}40`
+                                                                }}></div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                        ) : (
+                                            <div style={{ padding: '10px 0', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                                No specific reasons provided.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
 
 const AdminDashboard = () => {
     const [users, setUsers] = useState([]);
@@ -28,7 +242,21 @@ const AdminDashboard = () => {
 
     // Analytics State
     const [emotionCounts, setEmotionCounts] = useState({});
+    const [detailedCounts, setDetailedCounts] = useState({});
+    const [expandedEmotions, setExpandedEmotions] = useState({
+        Happy: true,
+        Stressed: true,
+        Anxious: false,
+        Neutral: false,
+        Sad: false
+    });
     const [stats, setStats] = useState({ totalFeedback: 0, mostCommon: 'N/A', pendingHelp: 0 });
+    const [selectedDetails, setSelectedDetails] = useState([]);
+
+    // Detailed Analytics Modal
+    const [showDetailedModal, setShowDetailedModal] = useState(false);
+    const [detailedModalData, setDetailedModalData] = useState({ reason: '', emotion: '', students: [] });
+    const [detailedModalSearch, setDetailedModalSearch] = useState('');
 
     // Filters
     const [dateFrom, setDateFrom] = useState('');
@@ -110,15 +338,29 @@ const AdminDashboard = () => {
 
     const processData = (data) => {
         const counts = { Happy: 0, Stressed: 0, Anxious: 0, Neutral: 0, Sad: 0 };
+        const detailed = {};
+
         data.forEach(item => {
             if (counts[item.emotion] !== undefined) {
                 counts[item.emotion]++;
+
+                // Detailed breakdown
+                const emotion = item.emotion;
+                const domain = item.emotion_domain || 'Unspecified';
+                if (!detailed[emotion]) detailed[emotion] = {};
+                detailed[emotion][domain] = (detailed[emotion][domain] || 0) + 1;
             } else if (item.emotion) {
                 const key = Object.keys(counts).find(k => k.toLowerCase() === item.emotion.toLowerCase());
-                if (key) counts[key]++;
+                if (key) {
+                    counts[key]++;
+                    const domain = item.emotion_domain || 'Unspecified';
+                    if (!detailed[key]) detailed[key] = {};
+                    detailed[key][domain] = (detailed[key][domain] || 0) + 1;
+                }
             }
         });
         setEmotionCounts(counts);
+        setDetailedCounts(detailed);
 
         let mostCommon = 'N/A';
         let maxCount = 0;
@@ -142,12 +384,16 @@ const AdminDashboard = () => {
     // --- Actions ---
 
     const handleDeleteUser = async (uid) => {
-        if (!window.confirm("Are you sure you want to delete this user?")) return;
+        if (!window.confirm("Are you sure you want to delete this user? This will also remove all their associated data (details, feedback, etc.) and CANNOT be undone.")) return;
         try {
             await apiClient(`/users/${uid}`, { method: 'DELETE' });
-            setUsers(users.filter(u => u.id !== uid));
+            setUsers(prev => prev.filter(u => (u.id || u.uid) !== uid));
+            // Also refresh other lists just in case
+            setStudentDetailsList(prev => prev.filter(d => d.uid !== uid));
+            alert("User and all associated data deleted successfully.");
         } catch (error) {
             console.error("Error deleting user:", error);
+            alert("Failed to delete user. Please check console for details.");
         }
     };
 
@@ -198,11 +444,44 @@ const AdminDashboard = () => {
         }
     };
 
+    const toggleSelectAllDetails = () => {
+        if (selectedDetails.length === studentDetailsList.length) {
+            setSelectedDetails([]);
+        } else {
+            setSelectedDetails(studentDetailsList.map(d => d._id));
+        }
+    };
+
+    const toggleSelectDetail = (id) => {
+        setSelectedDetails(prev =>
+            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        );
+    };
+
+    const handleBulkDeleteDetails = async () => {
+        if (!selectedDetails.length) return;
+        if (!window.confirm(`Are you sure you want to delete ${selectedDetails.length} record(s)? This cannot be undone.`)) return;
+
+        try {
+            await apiClient('/student-details/bulk', {
+                method: 'DELETE',
+                body: JSON.stringify({ ids: selectedDetails })
+            });
+            setStudentDetailsList(prev => prev.filter(d => !selectedDetails.includes(d._id)));
+            setSelectedDetails([]);
+            alert("Details deleted successfully.");
+        } catch (error) {
+            console.error("Error bulk deleting details:", error);
+            alert(`Failed to delete records: ${error.message || 'Unknown error'}`);
+        }
+    };
+
     const handleExport = () => {
-        const headers = ['Date,Emotion,Comment,Email'];
+        const headers = ['Date,Emotion,Intensity,Category,Triggers,Duration,Impact Score,Support,Comment,Email'];
         const csvContent = filteredFeedbacks.map(f => {
             const dateStr = f.dateObj.toLocaleDateString();
-            return `${dateStr},${f.emotion},"${f.comment || ''}",${f.email || 'Anonymous'}`;
+            const triggers = Array.isArray(f.emotion_triggers) ? f.emotion_triggers.join('; ') : (f.emotion_triggers || '');
+            return `${dateStr},${f.emotion},${f.emotion_intensity || 3},${f.emotion_domain || ''},"${triggers}","${f.emotion_duration || ''}",${f.life_impact_score || 3},"${f.support_type || ''}","${f.comment || ''}",${f.email || 'Anonymous'}`;
         }).join('\n');
 
         const blob = new Blob([headers + '\n' + csvContent], { type: 'text/csv' });
@@ -237,12 +516,102 @@ const AdminDashboard = () => {
                 label: '# of Votes',
                 data: Object.values(emotionCounts),
                 backgroundColor: [
-                    'rgba(75, 192, 192, 0.6)', 'rgba(255, 99, 132, 0.6)',
-                    'rgba(255, 206, 86, 0.6)', 'rgba(201, 203, 207, 0.6)', 'rgba(54, 162, 235, 0.6)',
+                    'rgba(16, 185, 129, 0.85)', // Happy
+                    'rgba(244, 63, 94, 0.85)',  // Stressed
+                    'rgba(245, 158, 11, 0.85)', // Anxious
+                    'rgba(148, 163, 184, 0.85)',// Neutral
+                    'rgba(59, 130, 246, 0.85)', // Sad
                 ],
-                borderWidth: 1,
+                borderColor: '#ffffff',
+                borderWidth: 3,
+                hoverOffset: 12
             },
         ],
+    };
+
+    const pieOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                titleColor: '#1e293b',
+                bodyColor: '#334155',
+                borderColor: '#e2e8f0',
+                borderWidth: 1,
+                padding: 12,
+                boxPadding: 6,
+                usePointStyle: true,
+                callbacks: {
+                    label: function(context) {
+                        let label = context.label || '';
+                        if (label) {
+                            label += ': ';
+                        }
+                        const value = context.raw || 0;
+                        const total = context.chart._metasets[context.datasetIndex].total;
+                        const percentage = total > 0 ? Math.round((value / total) * 100) + '%' : '0%';
+                        return `${label}${value} (${percentage})`;
+                    }
+                }
+            },
+            datalabels: {
+                labels: {
+                    value: {
+                        color: '#ffffff',
+                        font: {
+                            weight: 'bold',
+                            size: 16,
+                            family: "'Inter', sans-serif"
+                        },
+                        formatter: (value, ctx) => {
+                            const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            if (value === 0) return '';
+                            return Math.round((value / total) * 100) + '%';
+                        },
+                        align: 'center',
+                        anchor: 'center',
+                        textStrokeColor: 'rgba(0, 0, 0, 0.1)',
+                        textStrokeWidth: 1,
+                        textShadowBlur: 4,
+                        textShadowColor: 'rgba(0,0,0,0.3)'
+                    },
+                    name: {
+                        color: (ctx) => {
+                            return ctx.chart.data.datasets[0].backgroundColor[ctx.dataIndex];
+                        },
+                        font: {
+                            size: 14,
+                            family: "'Inter', sans-serif",
+                            weight: '600'
+                        },
+                        formatter: (value, ctx) => {
+                            if (value === 0) return '';
+                            return ctx.chart.data.labels[ctx.dataIndex];
+                        },
+                        align: 'start',
+                        anchor: 'start',
+                        offset: 15
+                    }
+                }
+            }
+        },
+        layout: {
+            padding: {
+                top: 20,
+                bottom: 20,
+                left: 40,
+                right: 40
+            }
+        },
+        animation: {
+            animateScale: true,
+            animateRotate: true
+        }
     };
 
     const isHighStress = (emotionCounts['Stressed'] || 0) + (emotionCounts['Anxious'] || 0) > (filteredFeedbacks.length / 2) && filteredFeedbacks.length > 0;
@@ -253,26 +622,12 @@ const AdminDashboard = () => {
             {/* Hamburger Button */}
             <button
                 onClick={() => setIsSidebarOpen(true)}
-                style={{
-                    position: 'fixed',
-                    top: '85px',
-                    left: '20px',
-                    zIndex: 100,
-                    backgroundColor: 'white',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    padding: '8px',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}
+                className="hamburger-btn"
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ width: '20px', height: '2px', backgroundColor: '#475569' }}></div>
-                    <div style={{ width: '20px', height: '2px', backgroundColor: '#475569' }}></div>
-                    <div style={{ width: '20px', height: '2px', backgroundColor: '#475569' }}></div>
+                    <div className="line"></div>
+                    <div className="line"></div>
+                    <div className="line"></div>
                 </div>
             </button>
 
@@ -280,34 +635,15 @@ const AdminDashboard = () => {
             {isSidebarOpen && (
                 <div
                     onClick={() => setIsSidebarOpen(false)}
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        backgroundColor: 'rgba(0,0,0,0.3)',
-                        backdropFilter: 'blur(4px)',
-                        zIndex: 1000,
-                        display: 'flex'
-                    }}
+                    className="sidebar-overlay"
                 >
                     <div
                         onClick={e => e.stopPropagation()}
-                        style={{
-                            width: '280px',
-                            height: '100%',
-                            backgroundColor: 'white',
-                            boxShadow: '4px 0 10px rgba(0,0,0,0.1)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            padding: '30px 20px',
-                            animation: 'slideIn 0.3s ease-out'
-                        }}
+                        className="sidebar-container"
                     >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                            <h3 style={{ margin: 0, color: '#1e293b' }}>Menu</h3>
-                            <button onClick={() => setIsSidebarOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>×</button>
+                        <div className="modal-header">
+                            <h3 className="sidebar-title">Menu</h3>
+                            <button onClick={() => setIsSidebarOpen(false)} className="sidebar-close-btn">×</button>
                         </div>
 
                         <nav style={{ display: 'flex', flexDirection: 'column', gap: '25px', flex: 1 }}>
@@ -327,7 +663,7 @@ const AdminDashboard = () => {
                                     <span className="user-name">{getUserName()}</span>
                                     <span className="user-role">Administrator</span>
                                 </div>
-                                <div className="sidebar-logout-arrow" onClick={logout} style={{ cursor: 'pointer' }} title="Logout">
+                                <div className="sidebar-logout-arrow" onClick={logout} title="Logout">
                                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                         <path d="M9 18l6-6-6-6" />
                                     </svg>
@@ -340,13 +676,19 @@ const AdminDashboard = () => {
 
             {/* Summary Cards */}
             <div className="stats-row">
-                <SummaryCard title="Total Feedback" value={stats.totalFeedback} color="#394d46" />
-                <SummaryCard title="Most Common" value={stats.mostCommon} color="#50c878" />
-                <SummaryCard title="Pending Help" value={stats.pendingHelp} color="#ef4444" />
+                <SummaryCard title="Total Students" value={studentDetailsList.length} color="var(--text-main)" icon="👥" />
+                <SummaryCard title="Total Feedback" value={stats.totalFeedback} color="var(--text-main)" icon="📝" />
+                <SummaryCard title="Most Common" value={stats.mostCommon} color="var(--text-main)" icon="📊" />
+                <SummaryCard title="Pending Help" value={stats.pendingHelp} color="var(--text-main)" icon="🆘" />
                 <SummaryCard
                     title="Status"
-                    value={isHighStress ? 'High Stress' : 'Normal'}
-                    color={isHighStress ? '#ef4444' : '#10b981'}
+                    value={isHighStress ? 'High stress' : 'Normal'}
+                    color="var(--text-main)"
+                    icon={
+                        <svg viewBox="0 0 24 24" width="28" height="28" stroke={isHighStress ? 'var(--status-stressed)' : 'currentColor'} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                        </svg>
+                    }
                 />
             </div>
 
@@ -368,19 +710,29 @@ const AdminDashboard = () => {
                             </thead>
                             <tbody>
                                 {helpRequests.length === 0 ? (
-                                    <tr><td colSpan="6" style={{ textAlign: 'center' }}>No active help requests.</td></tr>
+                                    <tr><td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No active help requests.</td></tr>
                                 ) : (
                                     helpRequests.map(req => (
                                         <tr key={req.id || req._id}>
                                             <td>{req.date}</td>
                                             <td>
-                                                <strong>{req.studentName || 'Unknown User'}</strong>
-                                                <div style={{ fontSize: '0.85em', color: '#555' }}>{req.studentEmail || req.email}</div>
-                                                <div style={{ fontSize: '0.8em', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>"{req.comment}"</div>
+                                                <strong style={{ color: 'var(--text-main)' }}>{req.studentName || 'Unknown User'}</strong>
+                                                <div style={{ fontSize: '0.85em', color: 'var(--text-secondary)' }}>{req.studentEmail || req.email}</div>
+                                                <div style={{ fontSize: '0.8em', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                                    <strong>Domain:</strong> {req.emotion_domain || '—'} |
+                                                    <strong> Impact:</strong> {req.life_impact_score}/5 |
+                                                    <strong> Duration:</strong> {req.emotion_duration || '—'}
+                                                </div>
+                                                {req.emotion_triggers && req.emotion_triggers.length > 0 && (
+                                                    <div style={{ fontSize: '0.75em', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                                        <strong>Triggers:</strong> {Array.isArray(req.emotion_triggers) ? req.emotion_triggers.join(', ') : req.emotion_triggers}
+                                                    </div>
+                                                )}
+                                                <div style={{ fontSize: '0.8em', color: 'var(--text-secondary)', marginTop: '2px', fontStyle: 'italic' }}>"{req.comment}"</div>
                                             </td>
                                             <td>
                                                 <span className={`emotion-tag ${req.emotion?.toLowerCase()}`}>{req.emotion}</span>
-                                                <span style={{ marginLeft: '5px', fontSize: '0.8em' }}>({req.emotion_intensity}/5)</span>
+                                                <span style={{ marginLeft: '5px', fontSize: '0.8em', color: 'var(--text-secondary)' }}>({req.emotion_intensity}/5)</span>
                                             </td>
                                             <td>
                                                 {(() => {
@@ -394,32 +746,21 @@ const AdminDashboard = () => {
                                                     const s = req.status || 'pending';
                                                     const label = statusLabels[s] || s;
 
-                                                    let color = '#394d46'; // default
-                                                    let bgColor = '#f3f4f6';
-
-                                                    if (s === 'pending' || s === 'none') {
-                                                        color = '#d97706';
-                                                        bgColor = '#fef3c7';
-                                                    } else if (s === 'resolved') {
-                                                        color = '#059669';
-                                                        bgColor = '#ecfdf5';
-                                                    } else if (s === 'yet_to_meet') {
-                                                        color = '#2563eb';
-                                                        bgColor = '#eff6ff';
-                                                    } else if (s === 'ongoing') {
-                                                        color = '#7c3aed';
-                                                        bgColor = '#f5f3ff';
-                                                    }
+                                                    let colorVar = '--status-pending';
+                                                    if (s === 'resolved') colorVar = '--status-resolved';
+                                                    else if (s === 'yet_to_meet') colorVar = '--status-yet-to-meet';
+                                                    else if (s === 'ongoing') colorVar = '--status-ongoing';
+                                                    else if (s === 'allocated') colorVar = '--status-allocated';
 
                                                     return (
                                                         <span style={{
-                                                            backgroundColor: bgColor,
-                                                            color: color,
+                                                            backgroundColor: `var(${colorVar})20`,
+                                                            color: `var(${colorVar})`,
                                                             padding: '4px 10px',
                                                             borderRadius: '12px',
                                                             fontWeight: 'bold',
                                                             fontSize: '0.85rem',
-                                                            border: `1px solid ${color}30`
+                                                            border: `1px solid var(${colorVar})40`
                                                         }}>
                                                             {label}
                                                         </span>
@@ -435,13 +776,13 @@ const AdminDashboard = () => {
                                                                 setSelectedFeedbackForAssign(req);
                                                                 setShowAssignModal(true);
                                                             }}
-                                                            className="btn"
-                                                            style={{ fontSize: '0.8rem', padding: '5px 10px', width: 'auto' }}
+                                                            className="btn btn-primary"
+                                                            style={{ fontSize: '0.8rem', padding: '5px 10px', width: 'auto', whiteSpace: 'nowrap' }}
                                                         >
                                                             {req.status === 'allocated' ? 'Reassign' : 'Assign Mentor'}
                                                         </button>
                                                     )}
-                                                    {req.status === 'resolved' && <span>Completed</span>}
+                                                    {req.status === 'resolved' && <span style={{ color: 'var(--success-green)', fontWeight: 'bold' }}>Completed</span>}
                                                 </div>
                                             </td>
                                         </tr>
@@ -457,77 +798,38 @@ const AdminDashboard = () => {
                 <>
                     {/* Alert Banner */}
                     {isHighStress && (
-                        <div style={{ padding: '15px', backgroundColor: '#fee2e2', border: '1px solid #ef4444', borderRadius: '8px', color: '#991b1b', marginBottom: '20px' }}>
+                        <div style={{ padding: '15px', backgroundColor: 'var(--danger-red)20', border: '1px solid var(--danger-red)', borderRadius: '8px', color: 'var(--danger-red)', marginBottom: '20px' }}>
                             <strong>Alert:</strong> High levels of stress or anxiety detected.
                         </div>
                     )}
 
-                    <div className="card" id="analytics-overview">
-                        <h3>Analytics Overview</h3>
-                        <div className="filters">
+                    <div className="card" id="analytics-overview" style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap', borderTop: '4px solid var(--primary-slate)' }}>
+                        <h2 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--text-main)', paddingRight: '10px' }}>Analytics Overview</h2>
+                        <div className="filters" style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, margin: 0 }}>
                             <label>From: <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} /></label>
                             <label>To: <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} /></label>
-                            <button className="btn" style={{ width: 'auto' }} onClick={handleExport}>Export CSV</button>
+                            <div style={{ marginLeft: 'auto' }}>
+                                <button className="btn" style={{ width: 'auto', margin: 0 }} onClick={handleExport}>Export CSV</button>
+                            </div>
                         </div>
 
-                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '60px', marginTop: '30px' }}>
-                            <div style={{ width: '320px', height: '320px' }}>
-                                <Pie
+                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', marginTop: '30px', width: '100%' }}>
+                            <div style={{ width: '100%', maxWidth: '600px', height: '400px', position: 'relative' }}>
+                                <Doughnut
                                     data={pieData}
-                                    options={{
-                                        plugins: {
-                                            legend: {
-                                                display: false // Hide default legend to use our custom one
-                                            }
-                                        }
-                                    }}
+                                    options={pieOptions}
                                 />
-                            </div>
-
-                            {/* Custom Side Legend with Counts */}
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '15px',
-                                padding: '20px',
-                                backgroundColor: '#f8fafc',
-                                borderRadius: '12px',
-                                border: '1px solid #e2e8f0',
-                                minWidth: '200px'
-                            }}>
-                                <h4 style={{ margin: '0 0 10px 0', color: '#475569', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Emotion Distribution
-                                </h4>
-                                {Object.entries(emotionCounts).map(([emotion, count], idx) => (
-                                    <div key={emotion} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <div style={{
-                                                width: '12px',
-                                                height: '12px',
-                                                backgroundColor: pieData.datasets[0].backgroundColor[idx],
-                                                borderRadius: '3px'
-                                            }}></div>
-                                            <span style={{ fontSize: '1rem', fontWeight: '500', color: '#1e293b' }}>{emotion}</span>
-                                        </div>
-                                        <span style={{
-                                            fontSize: '1rem',
-                                            fontWeight: '700',
-                                            color: '#394d46',
-                                            backgroundColor: '#f9fafb',
-                                            padding: '2px 8px',
-                                            borderRadius: '6px'
-                                        }}>
-                                            {count}
-                                        </span>
-                                    </div>
-                                ))}
-                                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#64748b' }}>Total</span>
-                                    <span style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e293b' }}>{filteredFeedbacks.length}</span>
-                                </div>
                             </div>
                         </div>
                     </div>
+
+                    <DetailedEmotionReasonAnalytics 
+                        filteredFeedbacks={filteredFeedbacks} 
+                        onShowStudents={(reason, emotion, students) => {
+                            setDetailedModalData({ reason, emotion, students });
+                            setShowDetailedModal(true);
+                        }}
+                    />
                 </>
             )}
 
@@ -546,12 +848,12 @@ const AdminDashboard = () => {
                             <tbody>
                                 {users.map(user => (
                                     <tr key={user.id}>
-                                        <td>{user.email}</td>
+                                        <td style={{ color: 'var(--text-main)' }}>{user.email}</td>
                                         <td>
                                             <span className="admin-badge" style={{
-                                                backgroundColor: user.role === 'admin' ? '#394d46' : '#f1f5f9',
-                                                color: user.role === 'admin' ? 'white' : '#475569',
-                                                border: user.role === 'admin' ? 'none' : '1px solid #e2e8f0',
+                                                backgroundColor: user.role === 'admin' ? 'var(--primary-slate)' : 'var(--bg-color)',
+                                                color: user.role === 'admin' ? 'white' : 'var(--text-main)',
+                                                border: user.role === 'admin' ? 'none' : '1px solid var(--border-color)',
                                                 padding: '4px 10px',
                                                 borderRadius: '20px',
                                                 fontSize: '0.75rem',
@@ -568,15 +870,13 @@ const AdminDashboard = () => {
                                                         setSelectedUserForProfile(user);
                                                         setShowProfileModal(true);
                                                     }}
+                                                    className="btn btn-secondary"
                                                     style={{
-                                                        background: '#f9fafb',
-                                                        color: '#394d46',
-                                                        border: '1px solid #e5e7eb',
                                                         padding: '5px 12px',
                                                         borderRadius: '6px',
-                                                        cursor: 'pointer',
                                                         fontSize: '0.8rem',
-                                                        fontWeight: '600'
+                                                        fontWeight: '600',
+                                                        width: 'auto'
                                                     }}
                                                 >
                                                     View Profile
@@ -585,15 +885,13 @@ const AdminDashboard = () => {
                                                     <>
                                                         <button
                                                             onClick={() => handleDeleteUser(user.id)}
+                                                            className="btn btn-danger"
                                                             style={{
-                                                                background: '#fee2e2',
-                                                                color: '#ef4444',
-                                                                border: '1px solid #fca5a5',
                                                                 padding: '5px 12px',
                                                                 borderRadius: '6px',
-                                                                cursor: 'pointer',
                                                                 fontSize: '0.8rem',
-                                                                fontWeight: '600'
+                                                                fontWeight: '600',
+                                                                width: 'auto'
                                                             }}
                                                         >
                                                             Delete
@@ -612,11 +910,48 @@ const AdminDashboard = () => {
 
             {activeView === 'student_details' && (
                 <section className="dashboard-section" id="student-details-view">
-                    <h3>👨‍🎓 Submitted Student Details</h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <h3>👨‍🎓 Submitted Student Details</h3>
+                        {selectedDetails.length > 0 && (
+                            <button
+                                onClick={handleBulkDeleteDetails}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    backgroundColor: 'var(--danger-red)20',
+                                    color: 'var(--danger-red)',
+                                    border: '1px solid var(--danger-red)40',
+                                    padding: '8px 16px',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                    fontSize: '0.9rem',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                                </svg>
+                                Delete Selected ({selectedDetails.length})
+                            </button>
+                        )}
+                    </div>
                     <div className="table-responsive" style={{ maxHeight: '600px', overflowY: 'auto' }}>
                         <table className="admin-table">
                             <thead>
                                 <tr>
+                                    <th style={{ width: '40px' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedDetails.length === studentDetailsList.length && studentDetailsList.length > 0}
+                                            onChange={toggleSelectAllDetails}
+                                            style={{ cursor: 'pointer' }}
+                                        />
+                                    </th>
                                     <th>Date</th>
                                     <th>Name</th>
                                     <th>Reg No</th>
@@ -629,10 +964,18 @@ const AdminDashboard = () => {
                             </thead>
                             <tbody>
                                 {studentDetailsList.length === 0 ? (
-                                    <tr><td colSpan="8" style={{ textAlign: 'center' }}>No student details submitted yet.</td></tr>
+                                    <tr><td colSpan="9" style={{ textAlign: 'center' }}>No student details submitted yet.</td></tr>
                                 ) : (
                                     studentDetailsList.map((detail, idx) => (
-                                        <tr key={detail._id || idx}>
+                                        <tr key={detail._id || idx} style={{ backgroundColor: selectedDetails.includes(detail._id) ? 'var(--bg-color)' : 'inherit' }}>
+                                            <td>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedDetails.includes(detail._id)}
+                                                    onChange={() => toggleSelectDetail(detail._id)}
+                                                    style={{ cursor: 'pointer' }}
+                                                />
+                                            </td>
                                             <td>{detail.date}</td>
                                             <td><strong>{detail.name}</strong></td>
                                             <td>{detail.regno}</td>
@@ -652,64 +995,7 @@ const AdminDashboard = () => {
 
             {activeView === 'feedback' && (
                 <section className="dashboard-section" id="feedback-reports">
-                    <h3>Recent Feedback Reports</h3>
-                    <div className="filters">
-                        <select value={filterEmotion} onChange={(e) => setFilterEmotion(e.target.value)}>
-                            <option value="All">All Emotions</option>
-                            <option value="Happy">Happy</option>
-                            <option value="Stressed">Stressed</option>
-                            <option value="Sad">Sad</option>
-                            <option value="Anxious">Anxious</option>
-                            <option value="Neutral">Neutral</option>
-                        </select>
-                    </div>
-                    <div className="table-responsive">
-                        <table className="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Student</th>
-                                    <th>Emotion</th>
-                                    <th>Comment</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredFeedbacks.slice(0, 50).map((item, idx) => (
-                                    <tr key={item.id || idx}>
-                                        <td>{item.dateObj.toLocaleDateString()}</td>
-                                        <td>
-                                            <strong>{item.studentName || 'Unknown'}</strong>
-                                            <div style={{ fontSize: '0.8em', color: '#777' }}>{item.studentEmail || item.email}</div>
-                                        </td>
-                                        <td>
-                                            <span className={`emotion-tag ${item.emotion?.toLowerCase()}`}>
-                                                {item.emotion}
-                                            </span>
-                                        </td>
-                                        <td>{item.comment}</td>
-                                        <td>
-                                            <button
-                                                onClick={() => handleDeleteFeedback(item.id || item._id)}
-                                                style={{
-                                                    backgroundColor: '#fee2e2',
-                                                    color: '#ef4444',
-                                                    border: '1px solid #fca5a5',
-                                                    padding: '5px 10px',
-                                                    borderRadius: '4px',
-                                                    cursor: 'pointer',
-                                                    fontSize: '0.8rem'
-                                                }}
-                                            >
-                                                Delete
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {filteredFeedbacks.length === 0 && <tr><td colSpan="4" style={{ textAlign: 'center' }}>No feedback found</td></tr>}
-                            </tbody>
-                        </table>
-                    </div>
+                    <FeedbackReports />
                 </section>
             )}
 
@@ -722,109 +1008,184 @@ const AdminDashboard = () => {
                 />
             )}
 
-            {showProfileModal && selectedUserForProfile && (
+            {
+                showProfileModal && selectedUserForProfile && (
+                    <div className="modal-overlay">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h3>User Profile</h3>
+                                <button onClick={() => setShowProfileModal(false)} className="modal-close-btn">×</button>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase' }}>Full Name</span>
+                                    <span style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>{selectedUserForProfile.name || 'Not Provided'}</span>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase' }}>Email Address</span>
+                                    <span style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>{selectedUserForProfile.email}</span>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase' }}>Role</span>
+                                    <span style={{
+                                        fontSize: '0.9rem',
+                                        color: 'white',
+                                        backgroundColor: selectedUserForProfile.role === 'admin' ? 'var(--primary-slate)' : 'var(--primary-slate-hover)',
+                                        padding: '2px 10px',
+                                        borderRadius: '12px',
+                                        width: 'fit-content',
+                                        marginTop: '4px'
+                                    }}>
+                                        {selectedUserForProfile.role}
+                                    </span>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase' }}>Last Login</span>
+                                    <span style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>
+                                        {selectedUserForProfile.lastLogin
+                                            ? new Date(selectedUserForProfile.lastLogin).toLocaleString()
+                                            : 'Never'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                {selectedUserForProfile.role !== 'admin' && (
+                                    <button
+                                        onClick={() => {
+                                            if (window.confirm(`Are you sure you want to delete user ${selectedUserForProfile.email}?`)) {
+                                                handleDeleteUser(selectedUserForProfile.id);
+                                                setShowProfileModal(false);
+                                            }
+                                        }}
+                                        className="btn btn-danger"
+                                        style={{ width: 'auto' }}
+                                    >
+                                        Delete User
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setShowProfileModal(false)}
+                                    className="btn btn-secondary"
+                                    style={{ width: 'auto' }}
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Detailed Analytics Drill-down Modal */}
+            {showDetailedModal && (
                 <div style={{
                     position: 'fixed',
                     top: 0,
                     left: 0,
-                    width: '100%',
-                    height: '100%',
-                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    backdropFilter: 'blur(8px)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     zIndex: 2000,
-                    backdropFilter: 'blur(5px)'
-                }}>
+                    padding: '20px'
+                }} onClick={() => setShowDetailedModal(false)}>
                     <div style={{
-                        backgroundColor: 'white',
-                        padding: '30px',
-                        borderRadius: '16px',
-                        width: '400px',
-                        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3 style={{ margin: 0 }}>User Profile</h3>
-                            <button onClick={() => setShowProfileModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Full Name</span>
-                                <span style={{ fontSize: '1.1rem', color: '#1e293b' }}>{selectedUserForProfile.name || 'Not Provided'}</span>
+                        backgroundColor: 'var(--card-bg)',
+                        borderRadius: 'var(--radius-lg)',
+                        width: '100%',
+                        maxWidth: '900px',
+                        maxHeight: '85vh',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        boxShadow: 'var(--shadow-lg)',
+                        border: '1px solid var(--border-color)',
+                        overflow: 'hidden'
+                    }} onClick={e => e.stopPropagation()}>
+                        
+                        <div style={{ padding: '24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--card-subtle-bg)' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--text-main)' }}>
+                                    Students: {detailedModalData.reason} ({detailedModalData.emotion})
+                                </h3>
+                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                    Found {detailedModalData.students.length} record{detailedModalData.students.length !== 1 ? 's' : ''}
+                                </div>
                             </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Email Address</span>
-                                <span style={{ fontSize: '1.1rem', color: '#1e293b' }}>{selectedUserForProfile.email}</span>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Role</span>
-                                <span style={{
-                                    fontSize: '0.9rem',
-                                    color: 'white',
-                                    backgroundColor: selectedUserForProfile.role === 'admin' ? '#2a3833' : '#394d46',
-                                    padding: '2px 10px',
-                                    borderRadius: '12px',
-                                    width: 'fit-content',
-                                    marginTop: '4px'
-                                }}>
-                                    {selectedUserForProfile.role}
-                                </span>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Last Login</span>
-                                <span style={{ fontSize: '1.1rem', color: '#1e293b' }}>
-                                    {selectedUserForProfile.lastLogin
-                                        ? new Date(selectedUserForProfile.lastLogin).toLocaleString()
-                                        : 'Never'}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                            {selectedUserForProfile.role !== 'admin' && (
-                                <button
-                                    onClick={() => {
-                                        if (window.confirm(`Are you sure you want to delete user ${selectedUserForProfile.email}?`)) {
-                                            handleDeleteUser(selectedUserForProfile.id);
-                                            setShowProfileModal(false);
-                                        }
-                                    }}
-                                    style={{
-                                        backgroundColor: '#fee2e2',
-                                        color: '#ef4444',
-                                        border: '1px solid #fca5a5',
-                                        padding: '10px 20px',
-                                        borderRadius: '8px',
-                                        cursor: 'pointer',
-                                        fontWeight: 'bold'
-                                    }}
-                                >
-                                    Delete User
-                                </button>
-                            )}
-                            <button
-                                onClick={() => setShowProfileModal(false)}
+                            <button 
+                                onClick={() => setShowDetailedModal(false)}
                                 style={{
-                                    backgroundColor: '#f1f5f9',
-                                    color: '#475569',
-                                    border: 'none',
-                                    padding: '10px 20px',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    fontWeight: 'bold'
+                                    background: 'transparent',
+                                    border: '1px solid var(--border-color)',
+                                    color: 'var(--text-secondary)',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer'
                                 }}
                             >
-                                Close
+                                ×
                             </button>
+                        </div>
+
+                        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-color)' }}>
+                            <input 
+                                type="text" 
+                                placeholder="Search students..." 
+                                value={detailedModalSearch}
+                                onChange={(e) => setDetailedModalSearch(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 15px',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border-color)',
+                                    backgroundColor: 'var(--bg-color)',
+                                    color: 'var(--text-main)'
+                                }}
+                            />
+                        </div>
+
+                        <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                <thead>
+                                    <tr>
+                                        <th style={{ padding: '12px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Student Name</th>
+                                        <th style={{ padding: '12px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Roll Number</th>
+                                        <th style={{ padding: '12px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Domain</th>
+                                        <th style={{ padding: '12px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {detailedModalData.students
+                                        .filter(s => 
+                                            s.name.toLowerCase().includes(detailedModalSearch.toLowerCase()) || 
+                                            s.id.toLowerCase().includes(detailedModalSearch.toLowerCase())
+                                        )
+                                        .map((student, idx) => (
+                                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                            <td style={{ padding: '12px', color: 'var(--text-main)', fontWeight: '500' }}>{student.name}</td>
+                                            <td style={{ padding: '12px', color: 'var(--text-main)' }}>{student.id}</td>
+                                            <td style={{ padding: '12px', color: 'var(--text-main)' }}>{student.department}</td>
+                                            <td style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{student.date}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             )}
-        </div>
+        </div >
     );
 };
 

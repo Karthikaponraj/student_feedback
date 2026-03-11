@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { apiClient } from '../utils/apiClient';
 
 
 const AdminUserMgmt = () => {
@@ -9,19 +9,14 @@ const AdminUserMgmt = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
 
-    const API_URL = 'http://localhost:5001/api';
-
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get(`${API_URL}/users`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setUsers(res.data);
-            setFilteredUsers(res.data);
+            const userList = await apiClient('/users');
+            setUsers(userList);
+            setFilteredUsers(userList);
         } catch (error) {
-            console.error(error);
+            console.error("Error fetching users:", error);
         }
         setLoading(false);
     };
@@ -43,28 +38,25 @@ const AdminUserMgmt = () => {
 
     const handleRoleChange = async (uid, newRole) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.post(`${API_URL}/set-role`, { uid, role: newRole }, {
-                headers: { Authorization: `Bearer ${token}` }
+            await apiClient('/set-role', {
+                method: 'POST',
+                body: JSON.stringify({ uid, role: newRole })
             });
             alert('Role updated successfully!');
-            fetchUsers(); // Refresh to ensure sync
+            fetchUsers();
         } catch (error) {
-            alert('Error updating role');
+            alert('Error updating role: ' + error.message);
         }
     };
 
     const handleDelete = async (uid) => {
         if (!window.confirm("Are you sure you want to permanently delete this user? This action cannot be undone.")) return;
         try {
-            const token = localStorage.getItem('token');
-            await axios.delete(`${API_URL}/users/${uid}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await apiClient(`/users/${uid}`, { method: 'DELETE' });
             alert('User deleted successfully.');
             fetchUsers();
         } catch (error) {
-            alert('Error deleting user');
+            alert('Error deleting user: ' + error.message);
         }
     };
 

@@ -56,7 +56,7 @@ const AssignMentorModal = ({ feedback, onClose, onAssign }) => {
                     <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>×</button>
                 </div>
 
-                <div style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+                <div style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '20px', color: '#334155' }}>
                     <p style={{ margin: '0 0 8px 0' }}><strong>Student:</strong> {feedback.studentName || 'Unknown User'}</p>
                     <p style={{ margin: '0 0 8px 0' }}><strong>Email:</strong> {feedback.studentEmail || feedback.email}</p>
                     <p style={{ margin: 0 }}><strong>Request:</strong> <span style={{ fontStyle: 'italic', color: '#64748b' }}>"{feedback.comment || 'No comment'}"</span></p>

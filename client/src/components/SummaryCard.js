@@ -3,23 +3,61 @@ import React from 'react';
 const SummaryCard = ({ title, value, color, icon }) => {
     return (
         <div style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '20px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            background: 'var(--card-subtle-bg)',
+            borderRadius: 'var(--radius-md)',
+            padding: '24px',
+            boxShadow: 'var(--shadow-premium)',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'space-between',
-            borderLeft: `5px solid ${color || '#394d46'}`,
-            flex: 1,
-            minWidth: '200px',
-            margin: '10px'
-        }}>
-            <div>
-                <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', color: '#666' }}>{title}</h3>
-                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#333' }}>{value}</div>
+            border: '1px solid var(--border-color)',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+        }}
+            className="summary-card-hover"
+        >
+            <div style={{ width: '100%' }}>
+                <h3 style={{
+                    margin: '0 0 12px 0',
+                    fontSize: '0.85rem',
+                    color: 'var(--text-secondary)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    fontWeight: '700'
+                }}>
+                    {title}
+                </h3>
+                <div style={{
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '12px',
+                    marginTop: '4px'
+                }}>
+                    {icon && (
+                        <div style={{
+                            fontSize: '1.8rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: color || 'var(--primary-slate)',
+                            opacity: 0.9,
+                            minWidth: '32px'
+                        }}>
+                            {icon}
+                        </div>
+                    )}
+                    <div style={{
+                        fontSize: '1.75rem',
+                        fontWeight: '800',
+                        color: 'var(--primary-slate)',
+                        lineHeight: '1.2',
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center'
+                    }}>
+                        {value}
+                    </div>
+                </div>
             </div>
-            {icon && <div style={{ fontSize: '2rem', opacity: 0.2 }}>{icon}</div>}
         </div>
     );
 };

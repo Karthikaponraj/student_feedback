@@ -13,7 +13,10 @@ const NotificationBell = () => {
 
     const fetchNotifications = async () => {
         try {
-            const endpoint = userRole === 'admin' ? '/notifications/admin' : '/notifications/student';
+            let endpoint = '/notifications/student';
+            if (userRole === 'admin') endpoint = '/notifications/admin';
+            else if (userRole === 'faculty') endpoint = '/notifications'; // Use generic endpoint for faculty
+
             const data = await apiClient(endpoint);
             setNotifications(data);
         } catch (error) {

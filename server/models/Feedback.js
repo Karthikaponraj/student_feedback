@@ -12,6 +12,12 @@ const feedbackSchema = new mongoose.Schema({
     place: String,
     emotion: { type: String, required: true },
     emotion_intensity: { type: Number, default: 3 },
+    emotion_domain: { type: String, default: null },
+    emotion_triggers: { type: [String], default: [] },
+    emotion_duration: { type: String, default: null },
+    life_impact_score: { type: Number, default: 3 },
+    support_type: { type: String, default: 'Self-managed' },
+    needs_immediate_help: { type: Boolean, default: false },
     helpRequested: { type: Boolean, default: false },
     comment: String,
     status: {

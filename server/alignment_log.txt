@@ -1,0 +1,56 @@
+--- DETAILED INSPECTION ---
+
+Feedback ID: 698c4372b7be643fd348133a
+  studentEmail (raw): "karthika.cb23@bitsathy.ac.in"
+  normalizedEmail: "karthika.cb23@bitsathy.ac.in"
+  MATCHED in StudentDetails: "karthika.cb23@bitsathy.ac.in"
+
+Feedback ID: 698c4a30b54d381e7f2a49d9
+  studentEmail (raw): "karthika.cb23@bitsathy.ac.in"
+  normalizedEmail: "karthika.cb23@bitsathy.ac.in"
+  MATCHED in StudentDetails: "karthika.cb23@bitsathy.ac.in"
+
+Feedback ID: 698c7ef6b54d381e7f2a4aa1
+  studentEmail (raw): "karthika.cb23@bitsathy.ac.in"
+  normalizedEmail: "karthika.cb23@bitsathy.ac.in"
+  MATCHED in StudentDetails: "karthika.cb23@bitsathy.ac.in"
+
+Feedback ID: 698df3e2201961e771fb4dd8
+  studentEmail (raw): "suhita.fd23@bitsathy.ac.in"
+  normalizedEmail: "suhita.fd23@bitsathy.ac.in"
+  MATCHED in StudentDetails: "suhita.fd23@bitsathy.ac.in"
+
+Feedback ID: 698df954c4f28fbb3fc0046d
+  studentEmail (raw): "suhita.fd23@bitsathy.ac.in"
+  normalizedEmail: "suhita.fd23@bitsathy.ac.in"
+  MATCHED in StudentDetails: "suhita.fd23@bitsathy.ac.in"
+
+Feedback ID: 698e07c4d9385ef75d9c3fae
+  studentEmail (raw): "sindhuuja.cb23@bitsathy.ac.in"
+  normalizedEmail: "sindhuuja.cb23@bitsathy.ac.in"
+  MATCHED in StudentDetails: "sindhuuja.cb23@bitsathy.ac.in"
+
+Feedback ID: 698eb6ea03c64ad2e69ca33f
+  studentEmail (raw): "karthika.cb23@bitsathy.ac.in"
+  normalizedEmail: "karthika.cb23@bitsathy.ac.in"
+  MATCHED in StudentDetails: "karthika.cb23@bitsathy.ac.in"
+
+Feedback ID: 698eb86203c64ad2e69ca36b
+  studentEmail (raw): "sudharshana.cb23@bitsathy.ac.in"
+  normalizedEmail: "sudharshana.cb23@bitsathy.ac.in"
+  MATCHED in StudentDetails: "sudharshana.cb23@bitsathy.ac.in"
+
+Feedback ID: 698ee67372746baba9b79087
+  studentEmail (raw): "jenisha.fd23@bitsathy.ac.in"
+  normalizedEmail: "jenisha.fd23@bitsathy.ac.in"
+  MATCHED in StudentDetails: "jenisha.fd23@bitsathy.ac.in"
+
+Feedback ID: 698f462a45066fb374c0a33e
+  studentEmail (raw): "mithran.fd23@bitsathy.ac.in"
+  normalizedEmail: "mithran.fd23@bitsathy.ac.in"
+  MATCHED in StudentDetails: "mithran.fd23@bitsathy.ac.in"
+
+Feedback ID: 699035cb93a05199dc2f3e73
+  studentEmail (raw): "sheela.cs23@bitsathy.ac.in"
+  normalizedEmail: "sheela.cs23@bitsathy.ac.in"
+  !!! NO MATCH FOUND !!!
