@@ -618,6 +618,41 @@ app.patch('/api/admin/resolve/:feedbackId', authenticateToken, async (req, res) 
     }
 });
 
+// GET all counselling sessions for all students (admin only)
+app.get('/api/admin/counselling-sessions', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.sendStatus(403);
+    try {
+        const sessions = await CounsellingSession.find()
+            .populate('student_id', 'name email')
+            .populate('faculty_id', 'name email')
+            .sort({ session_date: -1 });
+
+        // Fetch student details for additional info (department, regno)
+        const emails = sessions.map(s => s.student_id?.email).filter(Boolean);
+        const detailsList = await StudentDetails.find({ email: { $in: emails } });
+        const detailsMap = detailsList.reduce((acc, d) => {
+            acc[d.email.toLowerCase().trim()] = d;
+            return acc;
+        }, {});
+
+        const data = sessions.map(s => {
+            const email = (s.student_id?.email || "").toLowerCase().trim();
+            const details = detailsMap[email];
+            const sessionObj = s.toObject();
+            if (sessionObj.student_id) {
+                sessionObj.student_id.regno = details ? details.regno : 'N/A';
+                sessionObj.student_id.department = details ? details.department : 'N/A';
+            }
+            return sessionObj;
+        });
+
+        res.json(data);
+    } catch (error) {
+        console.error("Fetch Admin Sessions Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
 app.get('/api/mentors', authenticateToken, async (req, res) => {
     try {
         const mentors = await Mentor.find({ active: true }).sort({ name: 1 });

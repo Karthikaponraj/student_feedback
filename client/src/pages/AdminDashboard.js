@@ -9,6 +9,7 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearSca
 import { Doughnut, Bar } from 'react-chartjs-2';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import FeedbackReports from './FeedbackReports';
+import AdminCounsellingHistory from './AdminCounsellingHistory';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, ChartDataLabels);
 
@@ -651,6 +652,7 @@ const AdminDashboard = () => {
                             <div onClick={() => changeView('analytics')} className={`sidebar-link ${activeView === 'analytics' ? 'active' : ''}`}>📊 Analytics Overview</div>
                             <div onClick={() => changeView('users')} className={`sidebar-link ${activeView === 'users' ? 'active' : ''}`}>👥 User Management</div>
                             <div onClick={() => changeView('student_details')} className={`sidebar-link ${activeView === 'student_details' ? 'active' : ''}`}>👨‍🎓 Student Details</div>
+                            <div onClick={() => changeView('counselling_history')} className={`sidebar-link ${activeView === 'counselling_history' ? 'active' : ''}`}>📜 Counselling History</div>
                             <div onClick={() => changeView('feedback')} className={`sidebar-link ${activeView === 'feedback' ? 'active' : ''}`}>📋 Feedback Reports</div>
                         </nav>
 
@@ -994,6 +996,12 @@ const AdminDashboard = () => {
             {activeView === 'feedback' && (
                 <section className="dashboard-section" id="feedback-reports">
                     <FeedbackReports />
+                </section>
+            )}
+
+            {activeView === 'counselling_history' && (
+                <section className="dashboard-section" id="counselling-history">
+                    <AdminCounsellingHistory />
                 </section>
             )}
 
