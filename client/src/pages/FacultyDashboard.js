@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../utils/apiClient';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
@@ -13,17 +15,25 @@ const FacultyDashboard = () => {
     const [editData, setEditData] = useState({});
     const [saving, setSaving] = useState(null);
     const [message, setMessage] = useState({ text: '', type: '' });
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const { logout, currentUser } = useAuth();
+    const navigate = useNavigate();
+
+    const getUserName = () => {
+        if (!currentUser) return 'Faculty';
+        if (currentUser.name) return currentUser.name;
+        const namePart = currentUser.email?.split('@')[0];
+        return namePart ? namePart.charAt(0).toUpperCase() + namePart.slice(1).toLowerCase() : 'Faculty';
+    };
 
     const statusOptions = [
         { value: 'allocated', label: 'Allocated' },
-        { value: 'yet_to_meet', label: 'Yet to Meet' },
         { value: 'ongoing', label: 'Ongoing' },
         { value: 'resolved', label: 'Resolved' }
     ];
 
     const statusColors = {
         allocated: '#2563eb',
-        yet_to_meet: '#d97706',
         ongoing: '#7c3aed',
         resolved: '#059669',
         pending: '#dc2626'
@@ -31,7 +41,6 @@ const FacultyDashboard = () => {
 
     const statusLabels = {
         allocated: 'Allocated',
-        yet_to_meet: 'Yet to Meet',
         ongoing: 'Ongoing',
         resolved: 'Resolved',
         pending: 'Pending'
@@ -62,6 +71,7 @@ const FacultyDashboard = () => {
             setEditData({
                 status: c.status || 'allocated',
                 meetingTimeSlot: c.meetingTimeSlot || '',
+                meetingMode: c.meetingMode || 'offline',
                 meetingVenue: c.meetingVenue || ''
             });
         }
@@ -69,12 +79,22 @@ const FacultyDashboard = () => {
 
     const handleSave = async (feedbackId) => {
         const targetCase = cases.find(c => c.id === feedbackId);
-        // Validation: If status is being updated from Allocated to Yet to Meet or Ongoing, require meeting details
-        if (targetCase && (!targetCase.status || targetCase.status === 'allocated') && (editData.status === 'yet_to_meet' || editData.status === 'ongoing')) {
+        
+        // Automation: If time slot and venue are provided, force status to 'ongoing'
+        let finalData = { ...editData };
+        if (editData.meetingTimeSlot && editData.meetingVenue) {
+            finalData.status = 'ongoing';
+        }
+
+        // Validation for scheduling
+        if (targetCase && (!targetCase.status || targetCase.status === 'allocated')) {
             if (!editData.meetingTimeSlot || !editData.meetingVenue) {
-                setMessage({ text: 'Meeting Time Slot and Venue are required before scheduling.', type: 'error' });
-                setTimeout(() => setMessage({ text: '', type: '' }), 3000);
-                return;
+                // If they tried to change status to ongoing/resolved without details, or just didn't provide details
+                if (editData.status === 'ongoing' || editData.status === 'resolved') {
+                    setMessage({ text: 'Please provide meeting time and venue to schedule counselling.', type: 'error' });
+                    setTimeout(() => setMessage({ text: '', type: '' }), 3000);
+                    return;
+                }
             }
         }
 
@@ -82,9 +102,9 @@ const FacultyDashboard = () => {
         try {
             await apiClient(`/faculty/update-case/${feedbackId}`, {
                 method: 'PATCH',
-                body: JSON.stringify(editData)
+                body: JSON.stringify(finalData)
             });
-            setMessage({ text: 'Case updated successfully!', type: 'success' });
+            setMessage({ text: 'Case updated successfully and moved to Ongoing!', type: 'success' });
             fetchCases();
             setTimeout(() => setMessage({ text: '', type: '' }), 3000);
         } catch (error) {
@@ -120,7 +140,6 @@ const FacultyDashboard = () => {
     const stats = {
         total: cases.length,
         needsScheduling: cases.filter(c => (c.status === 'allocated' || !c.status) && !c.meetingTimeSlot).length,
-        yetToMeet: cases.filter(c => c.status === 'yet_to_meet').length,
         ongoing: cases.filter(c => c.status === 'ongoing').length,
         resolved: cases.filter(c => c.status === 'resolved').length
     };
@@ -224,7 +243,78 @@ const FacultyDashboard = () => {
     }
 
     return (
-        <div className="container" style={{ paddingTop: '20px' }}>
+        <div className="faculty-dashboard container" style={{ paddingTop: '20px', position: 'relative' }}>
+            {/* Hamburger Button */}
+            <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="hamburger-btn"
+                style={{ top: '85px', left: '20px' }}
+            >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="line"></div>
+                    <div className="line"></div>
+                    <div className="line"></div>
+                </div>
+            </button>
+
+            {/* Sidebar Overlay */}
+            {isSidebarOpen && (
+                <div
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="sidebar-overlay"
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        className="sidebar-container"
+                    >
+                        <div className="modal-header">
+                            <h3 className="sidebar-title">Menu</h3>
+                            <button onClick={() => setIsSidebarOpen(false)} className="sidebar-close-btn">×</button>
+                        </div>
+
+                        <nav style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+                            <Link to="/" className="sidebar-link active" onClick={() => setIsSidebarOpen(false)}>
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+                                    <rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+                                </svg>
+                                Faculty Dashboard
+                            </Link>
+                            <Link to="/counselling-management" className="sidebar-link" onClick={() => setIsSidebarOpen(false)}>
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                                </svg>
+                                Counselling Management
+                            </Link>
+                            <Link to="/profile" className="sidebar-link" onClick={() => setIsSidebarOpen(false)}>
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                    <circle cx="12" cy="7" r="4" />
+                                </svg>
+                                My Profile
+                            </Link>
+                        </nav>
+
+                        <div className="sidebar-footer">
+                            <div className="sidebar-user-info" style={{ backgroundColor: '#f8fafc', padding: '12px' }}>
+                                <div className="user-avatar" style={{ backgroundColor: '#334155', borderRadius: '12px', width: '45px', height: '45px' }}>
+                                    {getUserName().charAt(0)}
+                                </div>
+                                <div className="user-details">
+                                    <span className="user-name" style={{ color: '#1e293b' }}>{getUserName()}</span>
+                                    <span className="user-role" style={{ color: '#64748b' }}>Faculty Member</span>
+                                </div>
+                                <div className="sidebar-logout-arrow" onClick={logout} title="Logout">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M9 18l6-6-6-6" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* Message Banner */}
             {message.text && (
                 <div style={{
@@ -246,7 +336,6 @@ const FacultyDashboard = () => {
                 {[
                     { label: 'Total Allocated', value: stats.total, color: '#2563eb', icon: '📋' },
                     { label: 'Needs Scheduling', value: stats.needsScheduling, color: '#d97706', icon: '📅' },
-                    { label: 'Yet to Meet', value: stats.yetToMeet, color: '#64748b', icon: '🕒' },
                     { label: 'Ongoing', value: stats.ongoing, color: '#7c3aed', icon: '🔄' },
                     { label: 'Resolved', value: stats.resolved, color: '#10b981', icon: '✅' }
                 ].map((s, i) => (
@@ -292,11 +381,10 @@ const FacultyDashboard = () => {
 
                 {[
                     { id: 'allocated', title: 'Allocated Students', list: cases.filter(c => !c.status || c.status === 'allocated'), color: '#2563eb' },
-                    { id: 'yet_to_meet', title: 'Yet to Meet Students', list: cases.filter(c => c.status === 'yet_to_meet'), color: '#d97706' },
                     { id: 'ongoing', title: 'Ongoing Students', list: cases.filter(c => c.status === 'ongoing'), color: '#7c3aed' },
                     { id: 'resolved', title: 'Resolved Students', list: cases.filter(c => c.status === 'resolved'), color: '#059669' }
                 ].map((section, sectionIdx) => (
-                    <div key={section.id} style={{ marginBottom: sectionIdx < 3 ? '25px' : '0' }}>
+                    <div key={section.id} style={{ marginBottom: sectionIdx < 2 ? '25px' : '0' }}>
                         <h3 style={{ 
                             fontSize: '1.1rem', 
                             color: '#475569', 
@@ -324,9 +412,7 @@ const FacultyDashboard = () => {
 
                                     let availableStatuses = [];
                                     if (section.id === 'allocated') {
-                                        availableStatuses = statusOptions.filter(opt => ['allocated', 'yet_to_meet', 'ongoing'].includes(opt.value));
-                                    } else if (section.id === 'yet_to_meet') {
-                                        availableStatuses = statusOptions.filter(opt => ['yet_to_meet', 'ongoing'].includes(opt.value));
+                                        availableStatuses = statusOptions.filter(opt => ['allocated', 'ongoing'].includes(opt.value));
                                     } else if (section.id === 'ongoing') {
                                         availableStatuses = statusOptions.filter(opt => ['ongoing', 'resolved'].includes(opt.value));
                                     } else {
@@ -463,13 +549,37 @@ const FacultyDashboard = () => {
 
                                                             <div style={{ marginBottom: '16px' }}>
                                                                 <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: '#334155', fontSize: '0.9rem' }}>
+                                                                    Session Mode
+                                                                </label>
+                                                                <select
+                                                                    value={editData.meetingMode || 'offline'}
+                                                                    onChange={(e) => setEditData(prev => ({ ...prev, meetingMode: e.target.value }))}
+                                                                    disabled={isResolved}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '10px 12px',
+                                                                        borderRadius: '8px',
+                                                                        border: '1px solid #cbd5e1',
+                                                                        fontSize: '0.95rem',
+                                                                        backgroundColor: isResolved ? '#f1f5f9' : '#fff',
+                                                                        cursor: isResolved ? 'not-allowed' : 'pointer'
+                                                                    }}
+                                                                >
+                                                                    <option value="offline">Offline (In-Person)</option>
+                                                                    <option value="online">Online (Video Call)</option>
+                                                                </select>
+                                                            </div>
+
+                                                            <div style={{ marginBottom: '16px' }}>
+                                                                <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: '#334155', fontSize: '0.9rem' }}>
                                                                     Meeting Time Slot
                                                                 </label>
                                                                 <input
                                                                     type="datetime-local"
+                                                                    min={new Date().toISOString().slice(0, 16)}
                                                                     value={editData.meetingTimeSlot || ''}
                                                                     onChange={(e) => setEditData(prev => ({ ...prev, meetingTimeSlot: e.target.value }))}
-                                                                    disabled={isLocked || isResolved}
+                                                                    disabled={isResolved}
                                                                     style={{
                                                                         width: '100%',
                                                                         padding: '10px 12px',
@@ -477,22 +587,22 @@ const FacultyDashboard = () => {
                                                                         border: '1px solid #cbd5e1',
                                                                         fontSize: '0.95rem',
                                                                         boxSizing: 'border-box',
-                                                                        backgroundColor: (isLocked || isResolved) ? '#f1f5f9' : '#fff',
-                                                                        cursor: (isLocked || isResolved) ? 'not-allowed' : 'text'
+                                                                        backgroundColor: isResolved ? '#f1f5f9' : '#fff',
+                                                                        cursor: isResolved ? 'not-allowed' : 'text'
                                                                     }}
                                                                 />
                                                             </div>
 
                                                             <div style={{ marginBottom: '16px' }}>
                                                                 <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: '#334155', fontSize: '0.9rem' }}>
-                                                                    Meeting Venue
+                                                                    {editData.meetingMode === 'online' ? 'Meet Link' : 'Meeting Venue'}
                                                                 </label>
                                                                 <input
                                                                     type="text"
-                                                                    placeholder="e.g. Room 302, Main Block"
+                                                                    placeholder={editData.meetingMode === 'online' ? "Paste Meet/Zoom link here" : "e.g. Room 302, Main Block"}
                                                                     value={editData.meetingVenue || ''}
                                                                     onChange={(e) => setEditData(prev => ({ ...prev, meetingVenue: e.target.value }))}
-                                                                    disabled={isLocked || isResolved}
+                                                                    disabled={isResolved}
                                                                     style={{
                                                                         width: '100%',
                                                                         padding: '10px 12px',
@@ -500,11 +610,12 @@ const FacultyDashboard = () => {
                                                                         border: '1px solid #cbd5e1',
                                                                         fontSize: '0.95rem',
                                                                         boxSizing: 'border-box',
-                                                                        backgroundColor: (isLocked || isResolved) ? '#f1f5f9' : '#fff',
-                                                                        cursor: (isLocked || isResolved) ? 'not-allowed' : 'text'
+                                                                        backgroundColor: isResolved ? '#f1f5f9' : '#fff',
+                                                                        cursor: isResolved ? 'not-allowed' : 'text'
                                                                     }}
                                                                 />
                                                             </div>
+
 
                                                             {/* Show current meeting info if set */}
                                                             {(c.meetingTimeSlot || c.meetingVenue) && (
@@ -518,7 +629,8 @@ const FacultyDashboard = () => {
                                                                 }}>
                                                                     <strong>Current Schedule:</strong><br />
                                                                     {c.meetingTimeSlot && <span>🕐 {new Date(c.meetingTimeSlot).toLocaleString()}<br /></span>}
-                                                                    {c.meetingVenue && <span>📍 {c.meetingVenue}</span>}
+                                                                    {c.meetingMode && <span>📱 Mode: {c.meetingMode.charAt(0).toUpperCase() + c.meetingMode.slice(1)}<br /></span>}
+                                                                    {c.meetingVenue && <span>{c.meetingMode === 'online' ? '🔗 Link: ' : '📍 Venue: '}{c.meetingVenue}</span>}
                                                                 </div>
                                                             )}
 
@@ -541,7 +653,7 @@ const FacultyDashboard = () => {
                                                                         letterSpacing: '0.5px'
                                                                     }}
                                                                 >
-                                                                    {saving === c.id ? 'Saving...' : (section.id === 'yet_to_meet' ? '🔄 Update Status' : '💾 Save Changes')}
+                                                                    {saving === c.id ? 'Saving...' : '💾 Save Changes'}
                                                                 </button>
                                                             )}
                                                         </div>

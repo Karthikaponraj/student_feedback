@@ -10,6 +10,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import StudentDashboard from './pages/StudentDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
+import CounsellingManagement from './pages/CounsellingManagement';
 import Profile from './pages/Profile';
 import NotificationBell from './components/NotificationBell';
 import './App.css';
@@ -256,6 +257,14 @@ function App() {
                                 <>
                                     <Navbar theme={theme} toggleTheme={toggleTheme} />
                                     <DashboardRouter />
+                                </>
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/counselling-management" element={
+                            <ProtectedRoute allowedRoles={['faculty']}>
+                                <>
+                                    <Navbar theme={theme} toggleTheme={toggleTheme} />
+                                    <CounsellingManagement />
                                 </>
                             </ProtectedRoute>
                         } />

@@ -1,6 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
+import { Line } from 'react-chartjs-2';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend
+} from 'chart.js';
+
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend
+);
 
 const StudentDashboard = () => {
     const [emotion, setEmotion] = useState('');
@@ -27,6 +48,7 @@ const StudentDashboard = () => {
     const [emotionDuration, setEmotionDuration] = useState('');
     const [lifeImpactScore, setLifeImpactScore] = useState(3);
     const [selectedTriggers, setSelectedTriggers] = useState([]);
+    const [counsellingSessions, setCounsellingSessions] = useState([]);
 
     const REASONS_TO_TRIGGERS = {
         'Academics': [
@@ -192,9 +214,34 @@ const StudentDashboard = () => {
         }
     };
 
+    const handleSOSUpdate = async (id, status) => {
+        try {
+            await apiClient(`/feedback/sos-adoption/${id}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ sos_adoption: status })
+            });
+            fetchHistory();
+            setMessage({ text: `SOS Help status updated to ${status}!`, type: 'success' });
+            setTimeout(() => setMessage({ text: '', type: '' }), 3000);
+        } catch (error) {
+            console.error("Error updating SOS status:", error);
+            setMessage({ text: 'Error updating status.', type: 'error' });
+        }
+    };
+
+    const fetchCounsellingSessions = async () => {
+        try {
+            const data = await apiClient('/my-counselling-progress');
+            setCounsellingSessions(data);
+        } catch (error) {
+            console.error("Error fetching counselling sessions", error);
+        }
+    };
+
     useEffect(() => {
         checkDetails();
         fetchHistory();
+        fetchCounsellingSessions();
     }, []);
 
     const handleDetailsSubmit = async () => {
@@ -298,6 +345,8 @@ const StudentDashboard = () => {
         }
     };
 
+    const hasOngoingCase = history.length > 0 && history[0].status === 'ongoing';
+
     if (loading) {
         return (
             <div className="container" style={{ textAlign: 'center', paddingTop: '100px' }}>
@@ -328,14 +377,18 @@ const StudentDashboard = () => {
             )}
 
             <div style={{ textAlign: 'left', marginBottom: '35px' }}>
-                <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--primary-slate)', marginBottom: '4px' }}>Emotional Wellbeing Form</h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>Help us understand how you're doing today.</p>
+                <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--primary-slate)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ color: '#3b82f6' }}>✨</span> Emotional Wellbeing Form
+                </h1>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', marginLeft: '45px' }}>Help us understand how you're doing today.</p>
             </div>
 
             {/* Student Details Section - Only show if not submitted */}
             {!detailsSubmitted && (
                 <div className="card" style={{ marginBottom: '30px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                    <h2 style={{ borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', marginBottom: '20px' }}>Student Details</h2>
+                    <h2 style={{ borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '1.4rem' }}>👤</span> Student Details
+                    </h2>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                         <div className="form-group">
                             <label>Full Name *</label>
@@ -425,6 +478,28 @@ const StudentDashboard = () => {
                     </p>
                 )}
 
+                {hasOngoingCase ? (
+                    <div style={{
+                        backgroundColor: '#fef9c3',
+                        border: '1px solid #fef08a',
+                        borderRadius: '8px',
+                        padding: '20px',
+                        marginTop: '15px',
+                        color: '#854d0e',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px'
+                    }}>
+                        <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', color: '#854d0e' }}>
+                            🟡 Counselling Session In Progress
+                        </h3>
+                        <p style={{ margin: 0, lineHeight: '1.5', fontSize: '0.95rem' }}>
+                            Your emotional feedback is currently being addressed by a faculty member.
+                            <br /><br />
+                            New emotional feedback will be available once the counselling session has been completed.
+                        </p>
+                    </div>
+                ) : (
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
                         <label>Select Emotion:</label>
@@ -705,21 +780,269 @@ const StudentDashboard = () => {
                         Submit Feedback
                     </button>
                 </form>
+                )}
             </div>
 
+            {/* Counselling Progress Tracker Section */}
+            {counsellingSessions.length > 0 && (
+                <div className="card" style={{ 
+                    marginBottom: '30px', 
+                    boxShadow: 'var(--shadow-premium)', 
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--card-subtle-bg)',
+                    overflow: 'hidden',
+                    padding: '0'
+                }}>
+                    <div style={{ 
+                        padding: '25px 30px', 
+                        borderBottom: '1px solid var(--border-color)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        background: '#fff'
+                    }}>
+                        <div>
+                            <h2 style={{ margin: 0, color: '#1e293b', fontSize: '1.4rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span style={{ fontSize: '1.6rem' }}>📈</span> Counselling Progress Tracker
+                            </h2>
+                            <p style={{ margin: '4px 0 0 40px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                Visualizing your emotional wellbeing journey
+                            </p>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Latest Status</div>
+                            <div style={{ 
+                                fontSize: '1rem', 
+                                fontWeight: 700, 
+                                color: getEmotionColor(counsellingSessions[0].emotion_level ? {5:'Happy', 4:'Neutral', 3:'Anxious', 2:'Stressed', 1:'Sad'}[counsellingSessions[0].emotion_level] : 'Neutral'),
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                justifyContent: 'flex-end'
+                            }}>
+                                {getEmotionEmoji({5:'Happy', 4:'Neutral', 3:'Anxious', 2:'Stressed', 1:'Sad'}[counsellingSessions[0].emotion_level] || 'Neutral')}
+                                {{5:'Happy', 4:'Neutral', 3:'Anxious', 2:'Stressed', 1:'Sad'}[counsellingSessions[0].emotion_level] || 'Neutral'}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Stats Row */}
+                    <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(3, 1fr)', 
+                        gap: '20px', 
+                        padding: '20px 30px',
+                        backgroundColor: '#f8fafc',
+                        borderBottom: '1px solid var(--border-color)'
+                    }}>
+                        <div style={{ backgroundColor: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ fontSize: '1.5rem' }}>🎯</div>
+                            <div>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Total Sessions</div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e293b' }}>{counsellingSessions.length}</div>
+                            </div>
+                        </div>
+                        <div style={{ backgroundColor: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ fontSize: '1.5rem' }}>📊</div>
+                            <div>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Mood Trend</div>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    {counsellingSessions.length > 1 && counsellingSessions[0].emotion_level >= counsellingSessions[1].emotion_level ? '↗️ Positive' : '➡️ Stable'}
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ backgroundColor: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ fontSize: '1.5rem' }}>📅</div>
+                            <div>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Last Session</div>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1e293b' }}>{counsellingSessions[0].session_date}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style={{ padding: '30px', display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) 1.2fr', gap: '40px', alignItems: 'start' }}>
+                        {/* Chart Side */}
+                        <div style={{ position: 'relative' }}>
+                             <div style={{ height: '320px', backgroundColor: '#fff', padding: '20px', borderRadius: '16px', border: '1px solid rgba(226, 232, 240, 0.8)', boxShadow: '0 4px 20px -5px rgba(0,0,0,0.03)' }}>
+                                <Line
+                                    data={{
+                                        labels: counsellingSessions.slice().reverse().map((s, i) => `Session ${i + 1}`),
+                                        datasets: [{
+                                            label: 'Emotional Level',
+                                            data: counsellingSessions.slice().reverse().map(s => s.emotion_level || 3),
+                                            borderColor: '#10b981',
+                                            borderWidth: 4,
+                                            backgroundColor: (context) => {
+                                                const ctx = context.chart.ctx;
+                                                const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+                                                gradient.addColorStop(0, 'rgba(16, 185, 129, 0.25)');
+                                                gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+                                                return gradient;
+                                            },
+                                            tension: 0.45,
+                                            pointRadius: 6,
+                                            pointBackgroundColor: '#fff',
+                                            pointBorderColor: '#10b981',
+                                            pointBorderWidth: 3,
+                                            pointHoverRadius: 9,
+                                            pointHoverBackgroundColor: '#10b981',
+                                            pointHoverBorderColor: '#fff',
+                                            pointHoverBorderWidth: 4,
+                                            fill: true
+                                        }]
+                                    }}
+                                    options={{
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        layout: { padding: { top: 10, bottom: 10, left: 10, right: 10 } },
+                                        scales: {
+                                            y: {
+                                                min: 0.5,
+                                                max: 5.5,
+                                                grid: { color: 'rgba(226, 232, 240, 0.4)', drawBorder: false },
+                                                ticks: {
+                                                    stepSize: 1,
+                                                    font: { size: 11, weight: '600' },
+                                                    color: '#94a3b8',
+                                                    callback: (value) => {
+                                                        const labels = { 5: 'Happy', 4: 'Neutral', 3: 'Anxious', 2: 'Stressed', 1: 'Sad' };
+                                                        return labels[value] || '';
+                                                    }
+                                                }
+                                            },
+                                            x: {
+                                                grid: { display: false },
+                                                ticks: { font: { size: 11, weight: '600' }, color: '#94a3b8' }
+                                            }
+                                        },
+                                        plugins: { 
+                                            legend: { display: false },
+                                            tooltip: {
+                                                backgroundColor: '#1e293b',
+                                                padding: 12,
+                                                titleFont: { size: 14, weight: 'bold' },
+                                                bodyFont: { size: 13 },
+                                                cornerRadius: 8,
+                                                displayColors: false,
+                                                callbacks: {
+                                                    title: (context) => {
+                                                        const sessionIdx = counsellingSessions.length - 1 - context[0].dataIndex;
+                                                        return `Session on ${counsellingSessions[sessionIdx].session_date}`;
+                                                    },
+                                                    label: (context) => {
+                                                        const labels = { 5: 'Happy', 4: 'Neutral', 3: 'Anxious', 2: 'Stressed', 1: 'Sad' };
+                                                        return ` Feeling: ${labels[context.raw] || 'Unknown'}`;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '20px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#64748b' }}>
+                                    <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#10b981' }}></span>
+                                    <span>Improved</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#64748b' }}>
+                                    <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#f59e0b' }}></span>
+                                    <span>Monitoring</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Sessions Side */}
+                        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <h3 style={{ fontSize: '1.1rem', color: '#1e293b', marginBottom: '20px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ color: '#3b82f6' }}>🕒</span> Recent Journey
+                            </h3>
+                            <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingRight: '12px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '380px' }}>
+                                {counsellingSessions.map((session, idx) => (
+                                    <div key={idx} style={{ 
+                                        padding: '20px', 
+                                        backgroundColor: '#fff', 
+                                        borderRadius: '16px', 
+                                        border: '1px solid var(--border-color)',
+                                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)',
+                                        transition: 'all 0.3s ease',
+                                        position: 'relative'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <div style={{ 
+                                                    width: '32px', 
+                                                    height: '32px', 
+                                                    borderRadius: '10px', 
+                                                    backgroundColor: '#eff6ff', 
+                                                    color: '#3b82f6',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontWeight: 800,
+                                                    fontSize: '0.8rem'
+                                                }}>
+                                                    {counsellingSessions.length - idx}
+                                                </div>
+                                                <div style={{ fontWeight: 700, fontSize: '1rem', color: '#1e293b' }}>
+                                                    Session {getEmotionEmoji({5:'Happy', 4:'Neutral', 3:'Anxious', 2:'Stressed', 1:'Sad'}[session.emotion_level])}
+                                                </div>
+                                            </div>
+                                            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, background: '#f1f5f9', padding: '4px 8px', borderRadius: '6px' }}>
+                                                {session.session_date}
+                                            </span>
+                                        </div>
+                                        
+                                        <div style={{ fontSize: '0.9rem', color: '#475569', lineHeight: '1.5', paddingLeft: '42px' }}>
+                                            <p style={{ margin: 0 }}>
+                                                <strong style={{ color: '#1e293b' }}>Insight:</strong> {session.advice}
+                                            </p>
+                                        </div>
+
+                                        {session.next_followup_date && (
+                                            <div style={{ 
+                                                marginTop: '15px', 
+                                                marginLeft: '42px',
+                                                padding: '8px 12px', 
+                                                backgroundColor: '#fff7ed', 
+                                                borderRadius: '8px', 
+                                                fontSize: '0.8rem', 
+                                                color: '#c2410c', 
+                                                fontWeight: 600,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                border: '1px solid #ffedd5'
+                                            }}>
+                                                <span>📅 Next Follow-Up:</span> {session.next_followup_date}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="card">
-                <h2>Your History</h2>
+                <h2 style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', color: '#1e293b' }}>
+                    <span style={{ fontSize: '1.5rem' }}>📜</span> Your History
+                </h2>
                 {history.length === 0 ? <p>No feedback submitted yet.</p> : (
-                    <table className="table">
+                    <div className="table-container">
+                        <table className="table">
                         <thead>
                             <tr>
                                  <th style={{ whiteSpace: 'nowrap' }}>DATE</th>
                                  <th style={{ whiteSpace: 'nowrap' }}>EMOTION</th>
                                  <th>INTENSITY</th>
-                                 <th>STATUS</th>
-                                 <th>FACULTY/MENTOR</th>
-                                 <th style={{ whiteSpace: 'nowrap' }}>TIME & VENUE</th>
                                  <th>COMMENT</th>
+                                 <th style={{ whiteSpace: 'nowrap' }}>SOS SUPPORT</th>
+                                 <th style={{ whiteSpace: 'nowrap' }}>MENTOR ASSIGNED</th>
+                                 <th style={{ whiteSpace: 'nowrap' }}>COUNSELLING SCHEDULE</th>
+                                 <th style={{ whiteSpace: 'nowrap' }}>VENUE / MEETING LINK</th>
+                                 <th style={{ whiteSpace: 'nowrap' }}>SESSION STATUS</th>
+                                 <th style={{ minWidth: '200px' }}>FACULTY FEEDBACK</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -737,75 +1060,102 @@ const StudentDashboard = () => {
                                          </span>
                                      </td>
                                     <td>{item.emotion_intensity ? `${item.emotion_intensity}/5` : '--'}</td>
-                                    <td>
-                                        {item.helpRequested ? (
-                                            <>
-                                                {(!item.status || item.status === 'pending' || item.status === 'none') && (
-                                                    <span style={{ color: '#d32f2f', fontWeight: 'bold' }}>
-                                                        Pending
-                                                    </span>
-                                                )}
-                                                {(['allocated', 'yet_to_meet', 'ongoing'].includes(item.status)) && (
-                                                    <span style={{
-                                                        fontSize: '0.75rem',
-                                                        padding: '2px 8px',
-                                                        borderRadius: '10px',
-                                                        backgroundColor: '#eff6ff',
-                                                        border: '1px solid #bfdbfe',
-                                                        color: '#1e40af',
-                                                        textTransform: 'capitalize',
-                                                        fontWeight: 'bold'
-                                                    }}>
-                                                        {item.status.replace(/_/g, ' ')}
-                                                    </span>
-                                                )}
-                                                {item.status === 'resolved' && (
-                                                    <span style={{ color: '#059669', fontWeight: 'bold', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '10px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0' }}>
-                                                        Resolved
-                                                    </span>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <span style={{ color: '#9ca3af' }}>--</span>
-                                        )}
-                                    </td>
-                                    <td>
-                                        {/* Faculty/Mentor Column */}
-                                        {item.helpRequested ? (
-                                            <span style={{ fontSize: '0.9rem', color: '#334155', fontWeight: '500' }}>
-                                                {item.assignedFacultyName || item.assignedMentor || (item.assignedFacultyEmail ? item.assignedFacultyEmail.split('@')[0] : '--')}
-                                            </span>
-                                        ) : (
-                                            <span style={{ color: '#9ca3af' }}>--</span>
-                                        )}
-                                    </td>
-                                     <td style={{ whiteSpace: 'nowrap' }}>
-                                         {/* Time & Venue Column */}
-                                         {(item.meetingTimeSlot || item.meetingVenue) ? (
-                                             <div style={{
-                                                 padding: '8px',
-                                                 background: '#eff6ff',
-                                                 borderRadius: '8px',
-                                                 fontSize: '0.8rem',
-                                                 border: '1px solid #bfdbfe',
-                                                 display: 'inline-flex',
-                                                 alignItems: 'center',
-                                                 gap: '12px',
-                                                 whiteSpace: 'nowrap'
-                                             }}>
-                                                 {item.meetingTimeSlot && <span>🕐 {new Date(item.meetingTimeSlot).toLocaleString()}</span>}
-                                                 {item.meetingTimeSlot && item.meetingVenue && <span style={{ color: '#bfdbfe' }}>|</span>}
-                                                 {item.meetingVenue && <span>📍 {item.meetingVenue}</span>}
-                                             </div>
-                                         ) : (
-                                             <span style={{ color: '#9ca3af' }}>--</span>
-                                         )}
-                                    </td>
                                     <td>{item.comment || '--'}</td>
+                                    <td style={{ whiteSpace: 'nowrap' }}>
+                                        {/* SOS Support Column */}
+                                        <span style={{ 
+                                            fontWeight: 700, 
+                                            fontSize: '0.85rem',
+                                            color: (item.assignedFacultyName || item.assignedMentor || item.meetingVenue || item.meetingTimeSlot) ? '#10b981' : '#ef4444' 
+                                        }}>
+                                            {(item.assignedFacultyName || item.assignedMentor || item.meetingVenue || item.meetingTimeSlot) ? 'YES' : 'NO'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {/* Mentor Assigned Column */}
+                                        <span style={{ fontSize: '0.9rem', color: '#334155', fontWeight: '500' }}>
+                                            {item.helpRequested ? (item.assignedFacultyName || item.assignedMentor || (item.assignedFacultyEmail ? item.assignedFacultyEmail.split('@')[0] : '--')) : '--'}
+                                        </span>
+                                    </td>
+                                    <td style={{ whiteSpace: 'nowrap' }}>
+                                        {/* Counselling Schedule Column */}
+                                        {item.meetingTimeSlot ? (
+                                            <span style={{ fontSize: '0.85rem' }}>
+                                                🕐 {new Date(item.meetingTimeSlot).toLocaleString()}
+                                            </span>
+                                        ) : '--'}
+                                    </td>
+                                    <td>
+                                        {/* Venue / Meeting Link Column */}
+                                        {item.meetingVenue ? (
+                                            item.meetingMode === 'online' ? (
+                                                <a href={item.meetingVenue.startsWith('http') ? item.meetingVenue : `https://${item.meetingVenue}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline', fontSize: '0.85rem' }}>
+                                                    🔗 Join Meeting
+                                                </a>
+                                            ) : (
+                                                <span style={{ fontSize: '0.85rem' }}>📍 {item.meetingVenue}</span>
+                                            )
+                                        ) : '--'}
+                                    </td>
+                                    <td>
+                                       {/* Session Status Column */}
+                                       <span style={{
+                                           fontSize: '0.75rem',
+                                           padding: '2px 8px',
+                                           borderRadius: '10px',
+                                           fontWeight: 'bold',
+                                           textTransform: 'capitalize',
+                                           backgroundColor: item.status === 'resolved' ? '#ecfdf5' : 
+                                                          (['allocated', 'ongoing', 'yet_to_meet'].includes(item.status) ? '#eff6ff' : '#f8fafc'),
+                                           border: `1px solid ${item.status === 'resolved' ? '#a7f3d0' : 
+                                                             (['allocated', 'ongoing', 'yet_to_meet'].includes(item.status) ? '#bfdbfe' : '#e2e8f0')}`,
+                                           color: item.status === 'resolved' ? '#059669' : 
+                                                  (['allocated', 'ongoing', 'yet_to_meet'].includes(item.status) ? '#1e40af' : '#64748b')
+                                       }}>
+                                           {item.status === 'resolved' ? 'Completed' : 
+                                            (item.status === 'allocated' || item.status === 'yet_to_meet' ? 'Scheduled' : 
+                                             (item.status === 'ongoing' ? 'Ongoing' : (item.status === 'pending' ? 'Pending' : 'N/A')))}
+                                       </span>
+                                    </td>
+                                    <td style={{ minWidth: '200px', fontSize: '0.85rem', color: '#475569' }}>
+                                        {/* Faculty Feedback (fetched from each counselling session) */}
+                                        {(() => {
+                                            if (!counsellingSessions || counsellingSessions.length === 0) return item.faculty_feedback || '--';
+                                            
+                                            // Find sessions assigned to this specific faculty
+                                            const relatedSessions = counsellingSessions.filter(session => {
+                                                const facultyEmail = session.faculty_id?.email || '';
+                                                return item.assignedFacultyEmail && facultyEmail.toLowerCase() === item.assignedFacultyEmail.toLowerCase();
+                                            }).sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
+
+                                            if (relatedSessions.length === 0) return item.faculty_feedback || '--';
+
+                                            return (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    {relatedSessions.map((session, index) => (
+                                                        <div key={session._id} style={{
+                                                            background: '#f8fafc',
+                                                            padding: '8px',
+                                                            borderRadius: '6px',
+                                                            border: '1px solid #e2e8f0'
+                                                        }}>
+                                                            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '4px' }}>
+                                                                Session {index + 1} ({new Date(session.session_date).toLocaleDateString()})
+                                                            </div>
+                                                            <div style={{ fontStyle: 'italic', color: '#334155' }}>
+                                                                {session.faculty_feedback || session.discussion_summary || session.advice || 'No feedback recorded yet.'}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })()}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 )}
             </div>
         </div>

@@ -17,6 +17,7 @@ const User = require('./models/User');
 const Mentor = require('./models/Mentor');
 const Notification = require('./models/Notification');
 const StudentDetails = require('./models/StudentDetails');
+const CounsellingSession = require('./models/CounsellingSession');
 const authRoutes = require('./routes/auth');
 const notificationRoutes = require('./routes/notifications');
 
@@ -701,7 +702,8 @@ app.get('/api/faculty/my-students', authenticateToken, async (req, res) => {
                     batch: details.batch,
                     mobile: details.mobile,
                     place: details.place
-                } : null
+                } : null,
+                studentId: f.student ? (f.student._id || f.student) : (f.uid || f.email)
             };
         });
 
@@ -717,7 +719,7 @@ app.patch('/api/faculty/update-case/:feedbackId', authenticateToken, async (req,
     if (req.user.role !== 'faculty') return res.sendStatus(403);
     try {
         const { feedbackId } = req.params;
-        const { status, meetingTimeSlot, meetingVenue } = req.body;
+        const { status, meetingTimeSlot, meetingVenue, meetingMode, faculty_feedback } = req.body;
 
         // Verify faculty ownership
         const facultyUser = await User.findById(req.user.id);
@@ -739,6 +741,8 @@ app.patch('/api/faculty/update-case/:feedbackId', authenticateToken, async (req,
         if (status) updateData.status = status;
         if (meetingTimeSlot !== undefined) updateData.meetingTimeSlot = meetingTimeSlot;
         if (meetingVenue !== undefined) updateData.meetingVenue = meetingVenue;
+        if (meetingMode !== undefined) updateData.meetingMode = meetingMode;
+        if (faculty_feedback !== undefined) updateData.faculty_feedback = faculty_feedback;
 
         const updated = await Feedback.findByIdAndUpdate(feedbackId, updateData, { new: true });
 
@@ -751,7 +755,7 @@ app.patch('/api/faculty/update-case/:feedbackId', authenticateToken, async (req,
             }
 
             if (targetUserId) {
-                const statusLabels = { yet_to_meet: 'Yet to Meet', ongoing: 'Ongoing', resolved: 'Resolved' };
+                const statusLabels = { ongoing: 'Ongoing', resolved: 'Resolved' };
                 let msg = `Your support case status has been updated to: ${statusLabels[status] || status}.`;
 
                 if (meetingTimeSlot || meetingVenue) {
@@ -777,6 +781,194 @@ app.patch('/api/faculty/update-case/:feedbackId', authenticateToken, async (req,
         res.json({ message: "Case updated successfully", feedback: updated });
     } catch (error) {
         console.error("Faculty Update Case Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+// PATCH update SOS adoption status (student only)
+app.patch('/api/feedback/sos-adoption/:id', authenticateToken, async (req, res) => {
+    try {
+        const { sos_adoption } = req.body;
+        if (!['Adopted', 'Not Adopted', 'Pending'].includes(sos_adoption)) {
+            return res.status(400).json({ message: "Invalid SOS adoption status" });
+        }
+
+        const feedback = await Feedback.findById(req.params.id);
+        if (!feedback) return res.status(404).json({ message: "Feedback not found" });
+
+        // Ensure the student owns this feedback
+        if (feedback.student.toString() !== req.user.id && feedback.uid !== req.user.id) {
+            return res.sendStatus(403);
+        }
+
+        feedback.sos_adoption = sos_adoption;
+        await feedback.save();
+
+        res.json({ message: "SOS adoption status updated", feedback });
+    } catch (error) {
+        console.error("SOS Adoption Update Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+// --- Counselling Management Endpoints ---
+
+// Add new counselling session
+app.post('/api/counselling-sessions', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'faculty') return res.sendStatus(403);
+    try {
+        const { 
+            student_id, 
+            session_date, 
+            session_mode, 
+            venue, 
+            concern, 
+            discussion_summary, 
+            advice, 
+            action_plan, 
+            next_followup_date, 
+            session_status, 
+            emotion_level,
+            faculty_feedback 
+        } = req.body;
+        
+        // Basic validation: Verify student exists and (optional) check assignment
+        const student = await User.findById(student_id);
+        if (!student) return res.status(404).json({ message: "Student not found" });
+
+        const newSession = new CounsellingSession({
+            student_id,
+            faculty_id: req.user.id,
+            session_date,
+            session_mode,
+            venue,
+            concern,
+            discussion_summary,
+            advice,
+            action_plan,
+            next_followup_date,
+            session_status,
+            emotion_level: emotion_level || 3,
+            faculty_feedback
+        });
+        
+        await newSession.save();
+
+        // Automation: If session status is "Completed", update corresponding case status to "resolved"
+        if (session_status === 'Completed') {
+            await Feedback.findOneAndUpdate(
+                { student: student_id, assignedFacultyEmail: req.user.email, status: { $ne: 'resolved' } },
+                { status: 'resolved' }
+            );
+        }
+
+        res.status(201).json(newSession);
+    } catch (error) {
+        console.error("Add Counselling Session Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+// Get session history for a student
+app.get('/api/counselling-sessions/student/:studentId', authenticateToken, async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const sessions = await CounsellingSession.find({ student_id: studentId })
+            .sort({ session_date: -1 });
+        res.json(sessions);
+    } catch (error) {
+        console.error("Fetch Student Sessions Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+// Get all sessions for follow-up reminders (faculty only)
+app.get('/api/counselling-sessions/all-allocated', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'faculty') return res.sendStatus(403);
+    try {
+        const sessions = await CounsellingSession.find({ faculty_id: req.user.id })
+            .populate('student_id', 'name email regno')
+            .sort({ next_followup_date: 1 });
+            
+        // Fetch student details to get department
+        const emails = sessions.map(s => s.student_id?.email).filter(Boolean);
+        const detailsList = await StudentDetails.find({ email: { $in: emails } });
+        const detailsMap = detailsList.reduce((acc, d) => {
+            acc[d.email.toLowerCase().trim()] = d;
+            return acc;
+        }, {});
+
+        const data = sessions.map(s => {
+            const email = (s.student_id?.email || "").toLowerCase().trim();
+            const details = detailsMap[email];
+            const sessionObj = s.toObject();
+            if (sessionObj.student_id) {
+                sessionObj.student_id.regno = details ? details.regno : (sessionObj.student_id.regno || 'N/A');
+                sessionObj.student_id.department = details ? details.department : 'N/A';
+            }
+            return sessionObj;
+        });
+
+        res.json(data);
+    } catch (error) {
+        console.error("Fetch Allocated Sessions Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+// Get personal counselling history (student only)
+app.get('/api/my-counselling-progress', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'student') return res.sendStatus(403);
+    try {
+        const sessions = await CounsellingSession.find({ student_id: req.user.id })
+            .populate('faculty_id', 'name email')
+            .sort({ session_date: -1 });
+        res.json(sessions);
+    } catch (error) {
+        console.error("Fetch Student Progress Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+// Delete a counselling session
+app.delete('/api/counselling-sessions/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'faculty') return res.sendStatus(403);
+    try {
+        const session = await CounsellingSession.findOneAndDelete({ 
+            _id: req.params.id, 
+            faculty_id: req.user.id 
+        });
+        if (!session) return res.status(404).json({ message: "Session not found or unauthorized" });
+        res.sendStatus(204);
+    } catch (error) {
+        console.error("Delete Counselling Session Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+// Update a counselling session
+app.patch('/api/counselling-sessions/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'faculty') return res.sendStatus(403);
+    try {
+        const { id } = req.params;
+        const updated = await CounsellingSession.findOneAndUpdate(
+            { _id: id, faculty_id: req.user.id },
+            req.body,
+            { new: true }
+        );
+        if (!updated) return res.status(404).json({ message: "Session not found or unauthorized" });
+
+        // Automation: If session status is updated to "Completed", update corresponding case status to "resolved"
+        if (req.body.session_status === 'Completed') {
+            await Feedback.findOneAndUpdate(
+                { student: updated.student_id, assignedFacultyEmail: req.user.email, status: { $ne: 'resolved' } },
+                { status: 'resolved' }
+            );
+        }
+
+        res.json(updated);
+    } catch (error) {
+        console.error("Update Counselling Session Error:", error);
         res.status(500).json({ message: "Internal Server Error" });
     }
 });

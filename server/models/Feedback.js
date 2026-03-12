@@ -30,7 +30,14 @@ const feedbackSchema = new mongoose.Schema({
     assignedFacultyName: { type: String, default: null },
     assignedAt: { type: Date, default: null },
     meetingTimeSlot: { type: String, default: null },
+    meetingMode: { type: String, enum: ['online', 'offline'], default: 'offline' },
     meetingVenue: { type: String, default: null },
+    sos_adoption: { 
+        type: String, 
+        enum: ['Adopted', 'Not Adopted', 'Pending'], 
+        default: 'Pending' 
+    },
+    faculty_feedback: { type: String, default: null },
     date: { type: String, default: () => new Date().toISOString().split('T')[0] },
     timestamp: { type: Date, default: Date.now }
 });

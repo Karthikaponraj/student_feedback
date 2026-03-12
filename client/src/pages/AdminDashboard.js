@@ -739,7 +739,6 @@ const AdminDashboard = () => {
                                                     const statusLabels = {
                                                         pending: 'Pending',
                                                         allocated: 'Allocated',
-                                                        yet_to_meet: 'Yet to Meet',
                                                         ongoing: 'Ongoing',
                                                         resolved: 'Resolved'
                                                     };
@@ -748,7 +747,6 @@ const AdminDashboard = () => {
 
                                                     let colorVar = '--status-pending';
                                                     if (s === 'resolved') colorVar = '--status-resolved';
-                                                    else if (s === 'yet_to_meet') colorVar = '--status-yet-to-meet';
                                                     else if (s === 'ongoing') colorVar = '--status-ongoing';
                                                     else if (s === 'allocated') colorVar = '--status-allocated';
 
