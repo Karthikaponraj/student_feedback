@@ -101,11 +101,17 @@ const AdminCounsellingHistory = () => {
                                             <strong style={{ color: 'var(--primary-slate)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Main Concern:</strong> <br/>
                                             {session.concern}
                                         </div>
-                                        <div style={{ marginBottom: '8px', padding: '10px', backgroundColor: 'var(--bg-color)', borderRadius: '8px', borderLeft: '4px solid var(--primary-slate)' }}>
-                                            <strong style={{ color: 'var(--text-main)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Faculty Remarks:</strong> <br/>
-                                            <span style={{ fontStyle: 'italic', color: '#334155' }}>
-                                                {session.faculty_feedback || session.discussion_summary || 'No detailed feedback provided.'}
-                                            </span>
+                                        <div style={{ marginBottom: '8px' }}>
+                                            <strong style={{ color: 'var(--primary-slate)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Discussion Summary:</strong> <br/>
+                                            {session.discussion_summary || '—'}
+                                        </div>
+                                        <div style={{ marginBottom: '8px' }}>
+                                            <strong style={{ color: 'var(--primary-slate)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Advice Given:</strong> <br/>
+                                            {session.advice || '—'}
+                                        </div>
+                                        <div style={{ marginBottom: '8px' }}>
+                                            <strong style={{ color: 'var(--primary-slate)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Faculty Remarks:</strong> <br/>
+                                            {session.faculty_feedback || 'No detailed feedback provided.'}
                                         </div>
                                         <div>
                                             <strong style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Action Plan:</strong> <br/>

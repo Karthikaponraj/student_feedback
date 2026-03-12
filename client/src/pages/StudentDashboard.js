@@ -345,7 +345,7 @@ const StudentDashboard = () => {
         }
     };
 
-    const hasOngoingCase = history.length > 0 && history[0].status === 'ongoing';
+    const hasOngoingCase = history.length > 0 && history[0].status !== 'resolved' && (history[0].helpRequested || history[0].status === 'ongoing');
 
     if (loading) {
         return (
@@ -378,9 +378,9 @@ const StudentDashboard = () => {
 
             <div style={{ textAlign: 'left', marginBottom: '35px' }}>
                 <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--primary-slate)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ color: '#3b82f6' }}>✨</span> Emotional Wellbeing Form
+                    Emotional Wellbeing Form
                 </h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', marginLeft: '45px' }}>Help us understand how you're doing today.</p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>Help us understand how you're doing today.</p>
             </div>
 
             {/* Student Details Section - Only show if not submitted */}
@@ -491,7 +491,7 @@ const StudentDashboard = () => {
                         gap: '10px'
                     }}>
                         <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', color: '#854d0e' }}>
-                            🟡 Counselling Session In Progress
+                            🟡 Counselling Request / Session In Progress
                         </h3>
                         <p style={{ margin: 0, lineHeight: '1.5', fontSize: '0.95rem' }}>
                             Your emotional feedback is currently being addressed by a faculty member.
@@ -1026,7 +1026,7 @@ const StudentDashboard = () => {
 
             <div className="card">
                 <h2 style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', color: '#1e293b' }}>
-                    <span style={{ fontSize: '1.5rem' }}>📜</span> Your History
+                    <span style={{ fontSize: '1.5rem' }}>📜</span> Your Feedback History
                 </h2>
                 {history.length === 0 ? <p>No feedback submitted yet.</p> : (
                     <div className="table-container">
@@ -1036,21 +1036,17 @@ const StudentDashboard = () => {
                                  <th style={{ whiteSpace: 'nowrap' }}>DATE</th>
                                  <th style={{ whiteSpace: 'nowrap' }}>EMOTION</th>
                                  <th>INTENSITY</th>
+                                 <th style={{ minWidth: '200px' }}>DOMAIN & TRIGGERS</th>
                                  <th>COMMENT</th>
                                  <th style={{ whiteSpace: 'nowrap' }}>SOS SUPPORT</th>
-                                 <th style={{ whiteSpace: 'nowrap' }}>MENTOR ASSIGNED</th>
-                                 <th style={{ whiteSpace: 'nowrap' }}>COUNSELLING SCHEDULE</th>
-                                 <th style={{ whiteSpace: 'nowrap' }}>VENUE / MEETING LINK</th>
-                                 <th style={{ whiteSpace: 'nowrap' }}>SESSION STATUS</th>
-                                 <th style={{ minWidth: '200px' }}>FACULTY FEEDBACK</th>
                             </tr>
                         </thead>
                         <tbody>
                             {history.map(item => (
                                 <tr key={item.id || item._id || Math.random()}>
-                                    <td style={{ whiteSpace: 'nowrap' }}>{item.date || '--'}</td>
-                                    <td style={{ whiteSpace: 'nowrap' }}>
-                                         <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', whiteSpace: 'nowrap' }}>
+                                    <td style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>{item.date || '--'}</td>
+                                    <td style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>
+                                         <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', whiteSpace: 'nowrap', fontWeight: 600 }}>
                                              {item.emotion === 'Happy' && '😊'}
                                              {item.emotion === 'Stressed' && '😫'}
                                              {item.emotion === 'Anxious' && '😰'}
@@ -1059,97 +1055,46 @@ const StudentDashboard = () => {
                                              {item.emotion}
                                          </span>
                                      </td>
-                                    <td>{item.emotion_intensity ? `${item.emotion_intensity}/5` : '--'}</td>
-                                    <td>{item.comment || '--'}</td>
-                                    <td style={{ whiteSpace: 'nowrap' }}>
+                                    <td style={{ verticalAlign: 'top', fontWeight: 600, color: '#475569' }}>{item.emotion_intensity ? `${item.emotion_intensity}/5` : '--'}</td>
+                                    <td style={{ verticalAlign: 'top', fontSize: '0.85rem', lineHeight: '1.6' }}>
+                                        {item.emotion === 'Happy' ? (
+                                             <>
+                                                 <div><strong style={{ color: '#1e293b' }}>Domain:</strong> {item.emotion_domain || 'General Happiness'}</div>
+                                                 {item.outcome_of_happiness && <div><strong style={{ color: '#1e293b' }}>Outcome:</strong> {item.outcome_of_happiness}</div>}
+                                             </>
+                                        ) : (
+                                            <>
+                                                <div><strong style={{ color: '#1e293b' }}>Domain:</strong> {item.emotion_domain || item.reason || '--'}</div>
+                                                {item.emotion_triggers && item.emotion_triggers.length > 0 && (
+                                                    <div style={{ marginTop: '4px' }}>
+                                                        <strong style={{ color: '#1e293b' }}>Triggers:</strong>{' '}
+                                                        {Array.isArray(item.emotion_triggers) ? item.emotion_triggers.join(', ') : item.emotion_triggers}
+                                                    </div>
+                                                )}
+                                                <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '10px', color: '#64748b' }}>
+                                                    <span><strong style={{ color: '#1e293b' }}>Impact:</strong> {item.life_impact_score ? `${item.life_impact_score}/5` : '--'}</span>
+                                                    <span>|</span>
+                                                    <span><strong style={{ color: '#1e293b' }}>Duration:</strong> {item.emotion_duration || '--'}</span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </td>
+                                    <td style={{ verticalAlign: 'top', fontStyle: item.comment ? 'normal' : 'italic', color: item.comment ? '#334155' : '#94a3b8' }}>
+                                        {item.comment || 'No comment provided'}
+                                    </td>
+                                    <td style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>
                                         {/* SOS Support Column */}
                                         <span style={{ 
                                             fontWeight: 700, 
                                             fontSize: '0.85rem',
-                                            color: (item.assignedFacultyName || item.assignedMentor || item.meetingVenue || item.meetingTimeSlot) ? '#10b981' : '#ef4444' 
+                                            padding: '4px 8px',
+                                            borderRadius: '6px',
+                                            backgroundColor: item.helpRequested ? '#f0fdf4' : '#fef2f2',
+                                            color: item.helpRequested ? '#16a34a' : '#dc2626',
+                                            border: `1px solid ${item.helpRequested ? '#bbf7d0' : '#fecaca'}`
                                         }}>
-                                            {(item.assignedFacultyName || item.assignedMentor || item.meetingVenue || item.meetingTimeSlot) ? 'YES' : 'NO'}
+                                            {item.helpRequested ? 'YES' : 'NO'}
                                         </span>
-                                    </td>
-                                    <td>
-                                        {/* Mentor Assigned Column */}
-                                        <span style={{ fontSize: '0.9rem', color: '#334155', fontWeight: '500' }}>
-                                            {item.helpRequested ? (item.assignedFacultyName || item.assignedMentor || (item.assignedFacultyEmail ? item.assignedFacultyEmail.split('@')[0] : '--')) : '--'}
-                                        </span>
-                                    </td>
-                                    <td style={{ whiteSpace: 'nowrap' }}>
-                                        {/* Counselling Schedule Column */}
-                                        {item.meetingTimeSlot ? (
-                                            <span style={{ fontSize: '0.85rem' }}>
-                                                🕐 {new Date(item.meetingTimeSlot).toLocaleString()}
-                                            </span>
-                                        ) : '--'}
-                                    </td>
-                                    <td>
-                                        {/* Venue / Meeting Link Column */}
-                                        {item.meetingVenue ? (
-                                            item.meetingMode === 'online' ? (
-                                                <a href={item.meetingVenue.startsWith('http') ? item.meetingVenue : `https://${item.meetingVenue}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline', fontSize: '0.85rem' }}>
-                                                    🔗 Join Meeting
-                                                </a>
-                                            ) : (
-                                                <span style={{ fontSize: '0.85rem' }}>📍 {item.meetingVenue}</span>
-                                            )
-                                        ) : '--'}
-                                    </td>
-                                    <td>
-                                       {/* Session Status Column */}
-                                       <span style={{
-                                           fontSize: '0.75rem',
-                                           padding: '2px 8px',
-                                           borderRadius: '10px',
-                                           fontWeight: 'bold',
-                                           textTransform: 'capitalize',
-                                           backgroundColor: item.status === 'resolved' ? '#ecfdf5' : 
-                                                          (['allocated', 'ongoing', 'yet_to_meet'].includes(item.status) ? '#eff6ff' : '#f8fafc'),
-                                           border: `1px solid ${item.status === 'resolved' ? '#a7f3d0' : 
-                                                             (['allocated', 'ongoing', 'yet_to_meet'].includes(item.status) ? '#bfdbfe' : '#e2e8f0')}`,
-                                           color: item.status === 'resolved' ? '#059669' : 
-                                                  (['allocated', 'ongoing', 'yet_to_meet'].includes(item.status) ? '#1e40af' : '#64748b')
-                                       }}>
-                                           {item.status === 'resolved' ? 'Completed' : 
-                                            (item.status === 'allocated' || item.status === 'yet_to_meet' ? 'Scheduled' : 
-                                             (item.status === 'ongoing' ? 'Ongoing' : (item.status === 'pending' ? 'Pending' : 'N/A')))}
-                                       </span>
-                                    </td>
-                                    <td style={{ minWidth: '200px', fontSize: '0.85rem', color: '#475569' }}>
-                                        {/* Faculty Feedback (fetched from each counselling session) */}
-                                        {(() => {
-                                            if (!counsellingSessions || counsellingSessions.length === 0) return item.faculty_feedback || '--';
-                                            
-                                            // Find sessions assigned to this specific faculty
-                                            const relatedSessions = counsellingSessions.filter(session => {
-                                                const facultyEmail = session.faculty_id?.email || '';
-                                                return item.assignedFacultyEmail && facultyEmail.toLowerCase() === item.assignedFacultyEmail.toLowerCase();
-                                            }).sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
-
-                                            if (relatedSessions.length === 0) return item.faculty_feedback || '--';
-
-                                            return (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                    {relatedSessions.map((session, index) => (
-                                                        <div key={session._id} style={{
-                                                            background: '#f8fafc',
-                                                            padding: '8px',
-                                                            borderRadius: '6px',
-                                                            border: '1px solid #e2e8f0'
-                                                        }}>
-                                                            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '4px' }}>
-                                                                Session {index + 1} ({new Date(session.session_date).toLocaleDateString()})
-                                                            </div>
-                                                            <div style={{ fontStyle: 'italic', color: '#334155' }}>
-                                                                {session.faculty_feedback || session.discussion_summary || session.advice || 'No feedback recorded yet.'}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            );
-                                        })()}
                                     </td>
                                 </tr>
                             ))}
@@ -1158,6 +1103,150 @@ const StudentDashboard = () => {
                     </div>
                 )}
             </div>
+
+            {/* Your Counselling Progress Table */}
+            {history.some(item => item.helpRequested || item.assignedFacultyName || item.assignedMentor || item.meetingVenue || item.meetingTimeSlot) && (
+                <div className="card" style={{ marginTop: '30px' }}>
+                    <h2 style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', color: '#1e293b' }}>
+                        <span style={{ fontSize: '1.5rem' }}>🧑‍🏫</span> Your Counselling Progress
+                    </h2>
+                    <div className="table-container">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th style={{ whiteSpace: 'nowrap' }}>DATE OF REQUEST</th>
+                                    <th style={{ whiteSpace: 'nowrap' }}>SOS STATUS</th>
+                                    <th style={{ whiteSpace: 'nowrap' }}>ALLOCATED FACULTY</th>
+                                    <th style={{ whiteSpace: 'nowrap' }}>VENUE & TIME</th>
+                                    <th style={{ whiteSpace: 'nowrap' }}>SESSION STATUS</th>
+                                    <th style={{ minWidth: '300px' }}>FACULTY COUNSELLING RECORDS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {history
+                                    .filter(item => item.helpRequested || item.assignedFacultyName || item.assignedMentor || item.meetingVenue || item.meetingTimeSlot)
+                                    .map(item => (
+                                    <tr key={item.id || item._id || Math.random()}>
+                                        <td style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>{item.date || '--'}</td>
+                                        <td style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>
+                                            <span style={{ 
+                                                fontWeight: 700, 
+                                                fontSize: '0.85rem',
+                                                padding: '4px 8px',
+                                                borderRadius: '6px',
+                                                backgroundColor: item.helpRequested ? '#f0fdf4' : '#fef2f2',
+                                                color: item.helpRequested ? '#16a34a' : '#dc2626',
+                                                border: `1px solid ${item.helpRequested ? '#bbf7d0' : '#fecaca'}`
+                                            }}>
+                                                {item.helpRequested ? 'YES' : 'NO'}
+                                            </span>
+                                        </td>
+                                        <td style={{ verticalAlign: 'top' }}>
+                                            <div style={{ fontWeight: 600, color: '#1e293b' }}>
+                                                {item.assignedFacultyName || item.assignedMentor || (item.assignedFacultyEmail ? item.assignedFacultyEmail.split('@')[0] : '--')}
+                                            </div>
+                                            {item.assignedFacultyEmail && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{item.assignedFacultyEmail}</div>}
+                                        </td>
+                                        <td style={{ verticalAlign: 'top' }}>
+                                            {/* Venue / Meeting Link Column */}
+                                            <div style={{ marginBottom: '4px' }}>
+                                                {item.meetingVenue ? (
+                                                    item.meetingMode === 'online' ? (
+                                                        <a href={item.meetingVenue.startsWith('http') ? item.meetingVenue : `https://${item.meetingVenue}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline', fontSize: '0.85rem', fontWeight: 600 }}>
+                                                            🔗 Join Online Meeting
+                                                        </a>
+                                                    ) : (
+                                                        <span style={{ fontSize: '0.85rem', color: '#334155', fontWeight: 600 }}>📍 {item.meetingVenue}</span>
+                                                    )
+                                                ) : <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Venue TBD</span>}
+                                            </div>
+                                            {/* Time Column */}
+                                            {item.meetingTimeSlot ? (
+                                                <div style={{ fontSize: '0.8rem', color: '#475569' }}>
+                                                    🕐 {new Date(item.meetingTimeSlot).toLocaleString()}
+                                                </div>
+                                            ) : <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Time TBD</div>}
+                                        </td>
+                                        <td style={{ verticalAlign: 'top' }}>
+                                           {/* Session Status Column */}
+                                           <span style={{
+                                               display: 'inline-block',
+                                               fontSize: '0.75rem',
+                                               padding: '4px 10px',
+                                               borderRadius: '8px',
+                                               fontWeight: 'bold',
+                                               textTransform: 'uppercase',
+                                               letterSpacing: '0.05em',
+                                               backgroundColor: item.status === 'resolved' ? '#ecfdf5' : 
+                                                              (['allocated', 'ongoing', 'yet_to_meet'].includes(item.status) ? '#eff6ff' : '#f8fafc'),
+                                               border: `1px solid ${item.status === 'resolved' ? '#10b981' : 
+                                                                 (['allocated', 'ongoing', 'yet_to_meet'].includes(item.status) ? '#3b82f6' : '#e2e8f0')}`,
+                                               color: item.status === 'resolved' ? '#059669' : 
+                                                      (['allocated', 'ongoing', 'yet_to_meet'].includes(item.status) ? '#1d4ed8' : '#64748b')
+                                           }}>
+                                               {item.status === 'resolved' ? 'Completed' : 
+                                                (item.status === 'allocated' || item.status === 'yet_to_meet' ? 'Scheduled' : 
+                                                 (item.status === 'ongoing' ? 'Ongoing' : (item.status === 'pending' ? 'Pending' : 'N/A')))}
+                                           </span>
+                                        </td>
+                                        <td style={{ minWidth: '300px', fontSize: '0.85rem', color: '#475569', verticalAlign: 'top' }}>
+                                            {/* Faculty Feedback (fetched from each counselling session) */}
+                                            {(() => {
+                                                if (!counsellingSessions || counsellingSessions.length === 0) {
+                                                    return <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>{item.faculty_feedback || 'No counselling records yet.'}</span>;
+                                                }
+                                                
+                                                // Find sessions assigned to this specific faculty
+                                                const relatedSessions = counsellingSessions.filter(session => {
+                                                    const facultyEmail = session.faculty_id?.email || '';
+                                                    return item.assignedFacultyEmail && facultyEmail.toLowerCase() === item.assignedFacultyEmail.toLowerCase();
+                                                }).sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
+    
+                                                if (relatedSessions.length === 0) {
+                                                    return <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>{item.faculty_feedback || 'No detailed counselling records yet.'}</span>;
+                                                }
+    
+                                                return (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                        {relatedSessions.map((session, index) => (
+                                                            <div key={session._id} style={{
+                                                                background: '#fff',
+                                                                padding: '12px',
+                                                                borderRadius: '8px',
+                                                                border: '1px solid #e2e8f0',
+                                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                            }}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+                                                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e293b', textTransform: 'uppercase' }}>
+                                                                        Session {index + 1}
+                                                                    </div>
+                                                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                                                        {new Date(session.session_date).toLocaleDateString()}
+                                                                    </div>
+                                                                </div>
+                                                                <div style={{ display: 'grid', gap: '8px' }}>
+                                                                    {session.concern && <div><strong style={{ color: '#1e293b', fontSize: '0.8rem' }}>Concern:</strong> {session.concern}</div>}
+                                                                    {session.discussion_summary && <div><strong style={{ color: '#1e293b', fontSize: '0.8rem' }}>Summary:</strong> {session.discussion_summary}</div>}
+                                                                    {session.advice && <div><strong style={{ color: '#1e293b', fontSize: '0.8rem' }}>Insight/Advice:</strong> {session.advice}</div>}
+                                                                    <div>
+                                                                        <strong style={{ color: '#1e293b', fontSize: '0.8rem' }}>Faculty Remarks:</strong><br />
+                                                                        <span style={{ fontStyle: 'italic', color: '#334155' }}>{session.faculty_feedback || 'No specific remarks.'}</span>
+                                                                    </div>
+                                                                    {session.action_plan && <div><strong style={{ color: '#1e293b', fontSize: '0.8rem' }}>Action Plan:</strong> {session.action_plan}</div>}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

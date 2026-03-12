@@ -223,15 +223,60 @@ const CounsellingManagement = () => {
 
     const getFollowUpStatus = (dateStr) => {
         if (!dateStr) return null;
-        const today = new Date().toISOString().split('T')[0];
-        if (dateStr === today) return { label: 'Due Today', color: '#d97706', bg: '#fef3c7', icon: '🟡' };
-        if (dateStr < today) return { label: 'Overdue', color: '#dc2626', bg: '#fee2e2', icon: '🔴' };
+        const now = new Date();
+        const dateObj = new Date(dateStr);
+        
+        if (dateObj < now) return { label: 'Overdue', color: '#dc2626', bg: '#fee2e2', icon: '🔴' };
+        
+        const todayStr = now.toISOString().split('T')[0];
+        const itemDateStr = dateObj.toISOString().split('T')[0];
+        if (itemDateStr === todayStr) return { label: 'Due Today', color: '#d97706', bg: '#fef3c7', icon: '🟡' };
+        
         return { label: 'Upcoming', color: '#10b981', bg: '#d1fae5', icon: '🟢' };
     };
 
-    const sortedFollowUps = useMemo(() => {
-        return allFollowUps.filter(f => f.session_status === 'Follow-Up Required').sort((a, b) => a.next_followup_date.localeCompare(b.next_followup_date));
-    }, [allFollowUps]);
+    const sortedReminders = useMemo(() => {
+        const items = [];
+
+        // 1. Add follow-up reminders from sessions
+        allFollowUps
+            .filter(f => f.session_status === 'Follow-Up Required')
+            .forEach(f => {
+                items.push({
+                    id: f._id,
+                    type: 'follow-up',
+                    studentName: f.student_id?.name,
+                    regno: f.student_id?.regno,
+                    department: f.student_id?.department,
+                    date: f.next_followup_date,
+                    rawDate: new Date(f.next_followup_date)
+                });
+            });
+
+        // 2. Add initial meeting reminders from students (feedback)
+        students
+            .filter(s => s.meetingTimeSlot && s.status !== 'resolved')
+            .forEach(s => {
+                // Check if a session has already been recorded *after* this meeting was scheduled
+                // This prevents initial meetings that have already been addressed from showing up
+                const studentSessions = sessions[s.studentId || s.uid || s._id || s.id] || [];
+                const hasSessionBeenRecorded = studentSessions.length > 0;
+
+                if (!hasSessionBeenRecorded) {
+                    items.push({
+                        id: s.id || s._id,
+                        type: 'initial-meeting',
+                        studentName: s.studentName,
+                        regno: s.studentDetails?.regno || s.regno,
+                        department: s.studentDetails?.department || s.department,
+                        date: s.meetingTimeSlot,
+                        rawDate: new Date(s.meetingTimeSlot)
+                    });
+                }
+            });
+
+        return items.sort((a, b) => a.rawDate - b.rawDate);
+    }, [allFollowUps, students, sessions]);
 
     if (loading) {
         return (
@@ -340,8 +385,8 @@ const CounsellingManagement = () => {
                 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
                     {['Overdue', 'Due Today', 'Upcoming'].map(group => {
-                        const filtered = sortedFollowUps.filter(f => {
-                            const status = getFollowUpStatus(f.next_followup_date);
+                        const filtered = sortedReminders.filter(f => {
+                            const status = getFollowUpStatus(f.date);
                             return status.label === group;
                         });
 
@@ -386,28 +431,24 @@ const CounsellingManagement = () => {
                                                 borderLeft: `4px solid ${groupColors[group].main}`
                                             }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                    <div style={{ fontWeight: 700, color: '#1e293b' }}>{f.student_id?.name}</div>
-                                                    <button 
-                                                        onClick={() => handleDeleteFollowUp(f._id)}
-                                                        style={{ 
-                                                            border: 'none', 
-                                                            background: 'none', 
-                                                            cursor: 'pointer', 
-                                                            fontSize: '1rem',
-                                                            padding: '2px',
-                                                            color: '#94a3b8',
-                                                            transition: 'color 0.2s'
-                                                        }}
-                                                        onMouseEnter={e => e.currentTarget.style.color = '#dc2626'}
-                                                        onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
-                                                        title="Delete Follow-Up"
-                                                    >
-                                                        🗑️
-                                                    </button>
+                                                    <div style={{ fontWeight: 700, color: '#1e293b' }}>
+                                                        {f.studentName} 
+                                                        <span style={{ 
+                                                            fontSize: '0.65rem', 
+                                                            marginLeft: '6px', 
+                                                            padding: '2px 6px', 
+                                                            borderRadius: '4px',
+                                                            backgroundColor: f.type === 'initial-meeting' ? '#dbeafe' : '#fef3c7',
+                                                            color: f.type === 'initial-meeting' ? '#1e40af' : '#92400e',
+                                                            textTransform: 'uppercase'
+                                                        }}>
+                                                            {f.type === 'initial-meeting' ? 'Initial' : 'Follow-up'}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', marginTop: '4px', fontSize: '0.75rem' }}>
-                                                    <span>{f.student_id?.regno} • {f.student_id?.department || 'N/A'}</span>
-                                                    <span>{f.next_followup_date}</span>
+                                                    <span>{f.regno} • {f.department || 'N/A'}</span>
+                                                    <span>{new Date(f.date).toLocaleDateString()} {f.type === 'initial-meeting' ? new Date(f.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</span>
                                                 </div>
                                             </div>
                                         ))
@@ -654,16 +695,7 @@ const CounsellingManagement = () => {
                                                                 </div>
                                                                 <div style={{ gridColumn: 'span 2' }}>
                                                                     <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Faculty Feedback / Remarks</div>
-                                                                    <div style={{ 
-                                                                        fontSize: '0.9rem', 
-                                                                        color: '#1e293b', 
-                                                                        lineHeight: '1.5',
-                                                                        backgroundColor: '#f8fafc',
-                                                                        padding: '12px',
-                                                                        borderRadius: '8px',
-                                                                        border: '1px solid #e2e8f0',
-                                                                        fontStyle: session.faculty_feedback ? 'normal' : 'italic'
-                                                                    }}>
+                                                                    <div style={{ fontSize: '0.9rem', color: '#475569', lineHeight: '1.5', fontStyle: session.faculty_feedback ? 'normal' : 'italic' }}>
                                                                         {session.faculty_feedback || 'No specific feedback or additional remarks provided.'}
                                                                     </div>
                                                                 </div>
@@ -732,7 +764,7 @@ const CounsellingManagement = () => {
                                                         <div>
                                                             <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600 }}>Next Follow-up</div>
                                                             <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f59e0b' }}>
-                                                                {sessions[student.studentId || student.uid || student._id || student.id][0].next_followup_date || 'N/A'}
+                                                                {sessions[student.studentId || student.uid || student._id || student.id].length > 0 ? (sessions[student.studentId || student.uid || student._id || student.id][0].next_followup_date || 'N/A') : 'N/A'}
                                                             </div>
                                                         </div>
                                                     </div>
