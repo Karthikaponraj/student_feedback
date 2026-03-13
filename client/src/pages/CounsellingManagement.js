@@ -325,19 +325,18 @@ const CounsellingManagement = () => {
                                 </svg>
                                 Faculty Dashboard
                             </Link>
+                            <Link to="/?view=analytics" className="sidebar-link" onClick={() => setIsSidebarOpen(false)}>
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" />
+                                </svg>
+                                Student Emotional Overview
+                            </Link>
                             <Link to="/counselling-management" className="sidebar-link active" onClick={() => setIsSidebarOpen(false)}>
                                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
                                     <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
                                 </svg>
                                 Counselling Management
-                            </Link>
-                            <Link to="/profile" className="sidebar-link" onClick={() => setIsSidebarOpen(false)}>
-                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                                    <circle cx="12" cy="7" r="4" />
-                                </svg>
-                                My Profile
                             </Link>
                         </nav>
 

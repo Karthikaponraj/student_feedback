@@ -779,7 +779,7 @@ const AdminDashboard = () => {
                                                             className="btn btn-primary"
                                                             style={{ fontSize: '0.8rem', padding: '5px 10px', width: 'auto', whiteSpace: 'nowrap' }}
                                                         >
-                                                            {req.status === 'allocated' ? 'Reassign' : 'Assign Mentor'}
+                                                            {req.assignedMentor ? 'Assigned' : 'Assign Mentor'}
                                                         </button>
                                                     )}
                                                     {req.status === 'resolved' && <span style={{ color: 'var(--success-green)', fontWeight: 'bold' }}>Completed</span>}
@@ -803,7 +803,7 @@ const AdminDashboard = () => {
                         </div>
                     )}
 
-                    <div className="card" id="analytics-overview" style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap', borderTop: '4px solid var(--primary-slate)' }}>
+                    <div className="card" id="analytics-overview" style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
                         <h2 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--text-main)', paddingRight: '10px' }}>Analytics Overview</h2>
                         <div className="filters" style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, margin: 0 }}>
                             <label>From: <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} /></label>

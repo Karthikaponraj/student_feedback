@@ -42,6 +42,8 @@ const StudentDashboard = () => {
     const [lastEmotion, setLastEmotion] = useState(null);
     const [detailsSubmitted, setDetailsSubmitted] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [activeView, setActiveView] = useState('feedback_form'); // 'feedback_form', 'history', 'counselling_progress', 'counselling_tracker'
 
     // Additional restored fields
     const [emotionDomain, setEmotionDomain] = useState('');
@@ -141,7 +143,22 @@ const StudentDashboard = () => {
     const [suggestToOthers, setSuggestToOthers] = useState('');
     const [suggestionText, setSuggestionText] = useState('');
     
-    const { currentUser } = useAuth();
+    
+    const { logout, currentUser } = useAuth();
+
+    const changeView = (view) => {
+        setActiveView(view);
+        setIsSidebarOpen(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const getUserName = () => {
+        if (!currentUser) return 'Student';
+        if (currentUser.name) return currentUser.name;
+        if (!currentUser.email) return 'Student';
+        const namePart = currentUser.email.split('@')[0];
+        return namePart.charAt(0).toUpperCase() + namePart.slice(1).toLowerCase();
+    };
 
     useEffect(() => {
         if (currentUser && currentUser.email) {
@@ -160,7 +177,7 @@ const StudentDashboard = () => {
     };
 
     const validateForm = () => {
-        if (!detailsSubmitted || !emotion || !comment.trim() || !emotionDomain.trim() || !emotionDuration) {
+        if (!detailsSubmitted || hasOngoingCase || !emotion || !comment.trim() || !emotionDomain.trim() || !emotionDuration) {
             return false;
         }
 
@@ -205,9 +222,18 @@ const StudentDashboard = () => {
     const fetchHistory = async () => {
         try {
             const data = await apiClient('/my-feedback');
-            setHistory(data);
-            if (data.length > 0) {
-                setLastEmotion(data[0]);
+            // Sort by timestamp descending (latest first)
+            // Use _id as fallback since it also contains time information in MongoDB
+            const sortedData = [...data].sort((a, b) => {
+                const timeA = a.timestamp ? new Date(a.timestamp) : 0;
+                const timeB = b.timestamp ? new Date(b.timestamp) : 0;
+                if (timeA !== timeB) return timeB - timeA;
+                return (b.id || "").localeCompare(a.id || "");
+            });
+            
+            setHistory(sortedData);
+            if (sortedData.length > 0) {
+                setLastEmotion(sortedData[0]);
             }
         } catch (error) {
             console.error("Error fetching history", error);
@@ -298,7 +324,7 @@ const StudentDashboard = () => {
             setOutcomeOfHappiness('');
             setSuggestToOthers('');
             setSuggestionText('');
-            fetchHistory();
+            await fetchHistory();
             setTimeout(() => setMessage({ text: '', type: '' }), 3000);
         } catch (error) {
             setMessage({ text: 'Error submitting feedback. Please try again.', type: 'error' });
@@ -357,8 +383,64 @@ const StudentDashboard = () => {
     }
 
     return (
-        <div className="container" style={{ paddingTop: '20px' }}>
-            {lastEmotion && (
+        <div className="container" style={{ paddingTop: '20px', position: 'relative' }}>
+            
+            {/* Hamburger Button */}
+            <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="hamburger-btn"
+                style={{ top: '80px', left: '20px', zIndex: 1100 }} // Ensure visibility below/above navbar
+            >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="line"></div>
+                    <div className="line"></div>
+                    <div className="line"></div>
+                </div>
+            </button>
+
+            {/* Sidebar Overlay */}
+            {isSidebarOpen && (
+                <div
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="sidebar-overlay"
+                    style={{ zIndex: 2000 }} // Ensure it's above everything including the navbar
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        className="sidebar-container"
+                    >
+                        <div className="modal-header">
+                            <h3 className="sidebar-title">Menu</h3>
+                            <button onClick={() => setIsSidebarOpen(false)} className="sidebar-close-btn">×</button>
+                        </div>
+
+                        <nav style={{ display: 'flex', flexDirection: 'column', gap: '25px', flex: 1 }}>
+                            <div onClick={() => changeView('feedback_form')} className={`sidebar-link ${activeView === 'feedback_form' ? 'active' : ''}`}>📝 Feedback Form</div>
+                            <div onClick={() => changeView('history')} className={`sidebar-link ${activeView === 'history' ? 'active' : ''}`}>📜 Feedback History</div>
+                            <div onClick={() => changeView('counselling_progress')} className={`sidebar-link ${activeView === 'counselling_progress' ? 'active' : ''}`}>🧑‍🏫 Counselling Progress</div>
+                            <div onClick={() => changeView('counselling_tracker')} className={`sidebar-link ${activeView === 'counselling_tracker' ? 'active' : ''}`}>📈 Progress Tracker</div>
+                        </nav>
+
+                        <div className="sidebar-footer">
+                            <div className="sidebar-user-info">
+                                <div className="user-avatar">
+                                    {getUserName().charAt(0)}
+                                </div>
+                                <div className="user-details">
+                                    <span className="user-name">{getUserName()}</span>
+                                    <span className="user-role">Student</span>
+                                </div>
+                                <div className="sidebar-logout-arrow" onClick={logout} title="Logout">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M9 18l6-6-6-6" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {activeView === 'feedback_form' && lastEmotion && (
                 <div style={{
                     backgroundColor: '#fff',
                     padding: '10px 22px',
@@ -376,12 +458,17 @@ const StudentDashboard = () => {
                 </div>
             )}
 
-            <div style={{ textAlign: 'left', marginBottom: '35px' }}>
-                <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--primary-slate)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    Emotional Wellbeing Form
-                </h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>Help us understand how you're doing today.</p>
-            </div>
+            {activeView === 'feedback_form' && (
+                <div style={{ textAlign: 'left', marginBottom: '35px' }}>
+                    <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--primary-slate)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        Emotional Wellbeing Form
+                    </h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>Help us understand how you're doing today.</p>
+                </div>
+            )}
+
+            {activeView === 'feedback_form' && (
+                <>
 
             {/* Student Details Section - Only show if not submitted */}
             {!detailsSubmitted && (
@@ -461,9 +548,37 @@ const StudentDashboard = () => {
 
             {!detailsSubmitted && <hr style={{ border: '0', borderTop: '1px solid #e2e8f0', margin: '40px 0' }} />}
 
-            <div className={`card ${!detailsSubmitted ? 'disabled-section' : ''}`} style={{ opacity: detailsSubmitted ? 1 : 0.6, pointerEvents: detailsSubmitted ? 'auto' : 'none' }}>
-                <h2 style={{ color: detailsSubmitted ? '#2c3e50' : '#94a3b8' }}>How are you feeling today?</h2>
+            {hasOngoingCase && (
+                <div style={{
+                    backgroundColor: '#fef9c3',
+                    border: '1px solid #fef08a',
+                    borderRadius: '8px',
+                    padding: '20px',
+                    marginBottom: '20px',
+                    color: '#854d0e',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px'
+                }}>
+                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', color: '#854d0e' }}>
+                        🟡 Counselling Request / Session In Progress
+                    </h3>
+                    <p style={{ margin: 0, lineHeight: '1.5', fontSize: '0.95rem' }}>
+                        Your emotional feedback is currently being addressed by a faculty member.
+                        <br /><br />
+                        New emotional feedback will be available once the counselling session has been completed.
+                    </p>
+                </div>
+            )}
+
+            <div className={`card ${(hasOngoingCase || !detailsSubmitted) ? 'disabled-section' : ''}`} style={{ 
+                opacity: (hasOngoingCase || !detailsSubmitted) ? 0.7 : 1, 
+                pointerEvents: (hasOngoingCase || !detailsSubmitted) ? 'none' : 'auto',
+                position: 'relative'
+            }}>
+                <h2 style={{ color: detailsSubmitted ? 'var(--primary-slate)' : '#94a3b8' }}>How are you feeling today?</h2>
                 {!detailsSubmitted && <p style={{ color: '#d32f2f', fontWeight: 'bold' }}>⚠️ Please submit your details first to unlock the feedback form.</p>}
+                {hasOngoingCase && <p style={{ color: '#854d0e', fontWeight: 'bold' }}>🔒 Form locked: Feedback is currently being addressed.</p>}
                 {message.text && (
                     <p style={{
                         color: message.type === 'success' ? 'green' : 'red',
@@ -478,28 +593,6 @@ const StudentDashboard = () => {
                     </p>
                 )}
 
-                {hasOngoingCase ? (
-                    <div style={{
-                        backgroundColor: '#fef9c3',
-                        border: '1px solid #fef08a',
-                        borderRadius: '8px',
-                        padding: '20px',
-                        marginTop: '15px',
-                        color: '#854d0e',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '10px'
-                    }}>
-                        <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', color: '#854d0e' }}>
-                            🟡 Counselling Request / Session In Progress
-                        </h3>
-                        <p style={{ margin: 0, lineHeight: '1.5', fontSize: '0.95rem' }}>
-                            Your emotional feedback is currently being addressed by a faculty member.
-                            <br /><br />
-                            New emotional feedback will be available once the counselling session has been completed.
-                        </p>
-                    </div>
-                ) : (
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
                         <label>Select Emotion:</label>
@@ -780,19 +873,21 @@ const StudentDashboard = () => {
                         Submit Feedback
                     </button>
                 </form>
-                )}
             </div>
+            </>
+            )}
 
             {/* Counselling Progress Tracker Section */}
-            {counsellingSessions.length > 0 && (
-                <div className="card" style={{ 
-                    marginBottom: '30px', 
-                    boxShadow: 'var(--shadow-premium)', 
-                    border: '1px solid var(--border-color)',
-                    background: 'var(--card-subtle-bg)',
-                    overflow: 'hidden',
-                    padding: '0'
-                }}>
+            {activeView === 'counselling_tracker' && (
+                counsellingSessions.length > 0 ? (
+                    <div className="card" style={{ 
+                        marginBottom: '30px', 
+                        boxShadow: 'var(--shadow-premium)', 
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--card-subtle-bg)',
+                        overflow: 'hidden',
+                        padding: '0'
+                    }}>
                     <div style={{ 
                         padding: '25px 30px', 
                         borderBottom: '1px solid var(--border-color)',
@@ -1022,9 +1117,17 @@ const StudentDashboard = () => {
                         </div>
                     </div>
                 </div>
+                ) : (
+                    <div className="card" style={{ textAlign: 'center', padding: '50px' }}>
+                        <span style={{ fontSize: '3rem' }}>📈</span>
+                        <h3>No Progress Data Yet</h3>
+                        <p style={{ color: 'var(--text-secondary)' }}>Complete a few check-ins to see your emotional journey visualized.</p>
+                    </div>
+                )
             )}
 
-            <div className="card">
+            {activeView === 'history' && (
+                <div className="card">
                 <h2 style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', color: '#1e293b' }}>
                     <span style={{ fontSize: '1.5rem' }}>📜</span> Your Feedback History
                 </h2>
@@ -1102,14 +1205,16 @@ const StudentDashboard = () => {
                     </table>
                     </div>
                 )}
-            </div>
+                </div>
+            )}
 
             {/* Your Counselling Progress Table */}
-            {history.some(item => item.helpRequested || item.assignedFacultyName || item.assignedMentor || item.meetingVenue || item.meetingTimeSlot) && (
-                <div className="card" style={{ marginTop: '30px' }}>
-                    <h2 style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', color: '#1e293b' }}>
-                        <span style={{ fontSize: '1.5rem' }}>🧑‍🏫</span> Your Counselling Progress
-                    </h2>
+            {activeView === 'counselling_progress' && (
+                history.some(item => item.helpRequested || item.assignedFacultyName || item.assignedMentor || item.meetingVenue || item.meetingTimeSlot) ? (
+                    <div className="card" style={{ marginTop: '30px' }}>
+                        <h2 style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', color: '#1e293b' }}>
+                            <span style={{ fontSize: '1.5rem' }}>🧑‍🏫</span> Your Counselling Progress
+                        </h2>
                     <div className="table-container">
                         <table className="table">
                             <thead>
@@ -1246,6 +1351,13 @@ const StudentDashboard = () => {
                         </table>
                     </div>
                 </div>
+                ) : (
+                    <div className="card" style={{ textAlign: 'center', padding: '50px' }}>
+                        <span style={{ fontSize: '3rem' }}>🧑‍🏫</span>
+                        <h3>No Active Counselling Records</h3>
+                        <p style={{ color: 'var(--text-secondary)' }}>Your counselling progress and scheduled meetings will appear here when you request help or are assigned a mentor.</p>
+                    </div>
+                )
             )}
         </div>
     );
