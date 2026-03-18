@@ -23,7 +23,7 @@ ChartJS.register(
     Legend
 );
 
-const StudentDashboard = () => {
+const StudentDashboard = ({ theme }) => {
     const [emotion, setEmotion] = useState('');
     const [emotionIntensity, setEmotionIntensity] = useState(3);
     const [requestHelp, setRequestHelp] = useState(false);
@@ -389,7 +389,7 @@ const StudentDashboard = () => {
             <button
                 onClick={() => setIsSidebarOpen(true)}
                 className="hamburger-btn"
-                style={{ top: '80px', left: '20px', zIndex: 1100 }} // Ensure visibility below/above navbar
+                style={{ zIndex: 1100 }} // Ensure visibility below/above navbar
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div className="line"></div>
@@ -441,26 +441,27 @@ const StudentDashboard = () => {
                 </div>
             )}
             {activeView === 'feedback_form' && lastEmotion && (
-                <div style={{
-                    backgroundColor: '#fff',
-                    padding: '10px 22px',
-                    borderRadius: '50px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    marginBottom: '20px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                    border: '1px solid #e2e8f0',
-                    borderLeft: `5px solid ${getEmotionColor(lastEmotion.emotion)}`
-                }}>
-                    <span style={{ fontWeight: 700, fontSize: '1rem', color: '#1e293b' }}>Last Check-in:</span> 
-                    <span style={{ marginLeft: '10px', fontSize: '1.1rem', color: '#475569', fontWeight: 600 }}>{lastEmotion.emotion}</span>
-                    <span style={{ marginLeft: '12px', fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>({lastEmotion.date})</span>
+                <div 
+                    className="responsive-badge"
+                    style={{
+                        backgroundColor: 'var(--card-bg)',
+                        padding: '10px 22px',
+                        borderRadius: '50px',
+                        marginBottom: '20px',
+                        boxShadow: 'var(--shadow-sm)',
+                        border: '1px solid var(--border-color)',
+                        borderLeft: `5px solid ${getEmotionColor(lastEmotion.emotion)}`
+                    }}
+                >
+                    <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>Last Check-in:</span> 
+                    <span style={{ marginLeft: '10px', fontSize: '1.1rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{lastEmotion.emotion}</span>
+                    <span style={{ marginLeft: '12px', fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>({new Date(lastEmotion.timestamp || lastEmotion.date).toLocaleDateString()} {new Date(lastEmotion.timestamp || lastEmotion.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</span>
                 </div>
             )}
 
             {activeView === 'feedback_form' && (
                 <div style={{ textAlign: 'left', marginBottom: '35px' }}>
-                    <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--primary-slate)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <h1 className="responsive-header" style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--primary-slate)', marginBottom: '4px' }}>
                         Emotional Wellbeing Form
                     </h1>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>Help us understand how you're doing today.</p>
@@ -472,11 +473,11 @@ const StudentDashboard = () => {
 
             {/* Student Details Section - Only show if not submitted */}
             {!detailsSubmitted && (
-                <div className="card" style={{ marginBottom: '30px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                    <h2 style={{ borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="card" style={{ marginBottom: '30px', boxShadow: 'var(--shadow-sm)' }}>
+                    <h2 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-main)' }}>
                         <span style={{ fontSize: '1.4rem' }}>👤</span> Student Details
                     </h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="responsive-grid">
                         <div className="form-group">
                             <label>Full Name *</label>
                             <input name="name" value={studentDetails.name} onChange={handleDetailChange} placeholder="Enter your full name" required />
@@ -521,7 +522,7 @@ const StudentDashboard = () => {
                                 placeholder="Valid email required" 
                                 required 
                                 readOnly={!!currentUser?.email}
-                                style={{ backgroundColor: currentUser?.email ? '#f8fafc' : undefined, color: currentUser?.email ? '#64748b' : undefined }}
+                                style={{ backgroundColor: currentUser?.email ? 'var(--bg-color)' : 'var(--card-bg)', color: currentUser?.email ? 'var(--text-secondary)' : 'var(--text-main)' }}
                             />
                         </div>
                         <div className="form-group">
@@ -546,7 +547,7 @@ const StudentDashboard = () => {
                 </div>
             )}
 
-            {!detailsSubmitted && <hr style={{ border: '0', borderTop: '1px solid #e2e8f0', margin: '40px 0' }} />}
+            {!detailsSubmitted && <hr style={{ border: '0', borderTop: '1px solid var(--border-color)', margin: '40px 0' }} />}
 
             {hasOngoingCase && (
                 <div style={{
@@ -581,10 +582,10 @@ const StudentDashboard = () => {
                 {hasOngoingCase && <p style={{ color: '#854d0e', fontWeight: 'bold' }}>🔒 Form locked: Feedback is currently being addressed.</p>}
                 {message.text && (
                     <p style={{
-                        color: message.type === 'success' ? 'green' : 'red',
+                        color: message.type === 'success' ? 'var(--success-green)' : 'var(--danger-red)',
                         fontWeight: 'bold',
                         padding: '10px',
-                        backgroundColor: message.type === 'success' ? '#e8f5e9' : '#ffebee',
+                        backgroundColor: message.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
                         borderRadius: '5px',
                         marginBottom: '10px',
                         animation: 'fadeIn 0.5s'
@@ -611,8 +612,9 @@ const StudentDashboard = () => {
                                     }}
                                     title={emotionTooltips[e]}
                                     style={{
-                                        borderColor: emotion === e ? getEmotionColor(e) : '#ddd',
-                                        backgroundColor: emotion === e ? `${getEmotionColor(e)}20` : 'white',
+                                        borderColor: emotion === e ? getEmotionColor(e) : 'var(--border-color)',
+                                        backgroundColor: emotion === e ? `${getEmotionColor(e)}20` : 'var(--card-bg)',
+                                        color: 'var(--text-main)',
                                         cursor: 'pointer',
                                         position: 'relative'
                                     }}
@@ -642,7 +644,7 @@ const StudentDashboard = () => {
                                     onChange={(e) => setEmotionIntensity(Number(e.target.value))}
                                     style={{ width: '100%', cursor: 'pointer' }}
                                 />
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#666' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                                     <span>Low</span>
                                     <span>Very High</span>
                                 </div>
@@ -651,12 +653,13 @@ const StudentDashboard = () => {
                             {emotionSuggestions[emotion] && (
                                 <div style={{
                                     padding: '15px',
-                                    backgroundColor: '#e3f2fd',
+                                    backgroundColor: 'rgba(227, 242, 253, 0.1)',
+                                    border: '1px solid rgba(13, 71, 161, 0.2)',
                                     borderRadius: '8px',
                                     marginBottom: '20px',
                                     marginTop: '20px',
-                                    boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-                                    color: '#0d47a1',
+                                    boxShadow: 'var(--shadow-sm)',
+                                    color: 'var(--blue-accent)',
                                     transition: 'all 0.3s ease-in-out',
                                     animation: 'fadeIn 0.5s ease-in-out'
                                 }}>
@@ -673,7 +676,7 @@ const StudentDashboard = () => {
                             )}
 
                             {['Sad', 'Anxious', 'Stressed'].includes(emotion) && (
-                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#fff0f0', padding: '10px', borderRadius: '5px', border: '1px solid #ffcccc' }}>
+                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255, 240, 240, 0.1)', padding: '10px', borderRadius: '5px', border: '1px solid var(--danger-red)' }}>
                                     <input
                                         type="checkbox"
                                         id="requestHelp"
@@ -681,14 +684,14 @@ const StudentDashboard = () => {
                                         onChange={(e) => setRequestHelp(e.target.checked)}
                                         style={{ width: '20px', height: '20px' }}
                                     />
-                                    <label htmlFor="requestHelp" style={{ margin: 0, color: '#d32f2f', fontWeight: 'bold' }}>
+                                    <label htmlFor="requestHelp" style={{ margin: 0, color: 'var(--danger-red)', fontWeight: 'bold' }}>
                                         I want someone to reach out to me
                                     </label>
                                 </div>
                             )}
 
-                            {/* Additional Required Fields */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
+                             {/* Additional Required Fields */}
+                             <div className="responsive-grid" style={{ marginBottom: '15px' }}>
                                 <div className="form-group" style={{ marginBottom: 0 }}>
                                     <label>What is mainly affecting you today? *</label>
                                     <select 
@@ -733,16 +736,16 @@ const StudentDashboard = () => {
                             {emotion !== 'Happy' && emotionDomain && REASONS_TO_TRIGGERS[emotionDomain] && (
                                 <div className="form-group" style={{ 
                                     animation: 'fadeIn 0.4s ease-out', 
-                                    backgroundColor: '#f8fafc', 
+                                    backgroundColor: 'var(--bg-color)', 
                                     padding: '15px', 
                                     borderRadius: '8px',
-                                    border: '1px solid #e2e8f0',
+                                    border: '1px solid var(--border-color)',
                                     marginBottom: '20px'
                                 }}>
-                                    <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#1e293b' }}>
+                                    <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: 'var(--text-main)' }}>
                                         What specifically triggered this? (Select all that apply) *
                                     </label>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                    <div className="responsive-grid" style={{ gap: '10px' }}>
                                         {REASONS_TO_TRIGGERS[emotionDomain].map(trigger => (
                                             <label key={trigger} style={{ 
                                                 display: 'flex', 
@@ -784,7 +787,7 @@ const StudentDashboard = () => {
                                     onChange={(e) => setLifeImpactScore(Number(e.target.value))}
                                     style={{ width: '100%', cursor: 'pointer' }}
                                 />
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#666' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                                     <span>Minimal Impact</span>
                                     <span>Major Impact</span>
                                 </div>
@@ -792,8 +795,8 @@ const StudentDashboard = () => {
 
                             {/* Happy Emotion Custom Form Logic */}
                             {emotion === 'Happy' && (
-                                <div style={{ padding: '20px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', marginBottom: '20px' }}>
-                                    <h3 style={{ color: '#166534', marginTop: 0, marginBottom: '15px', fontSize: '1.1rem' }}>Share your happiness</h3>
+                                <div style={{ padding: '20px', backgroundColor: 'rgba(240, 253, 244, 0.1)', border: '1px solid var(--success-green)', borderRadius: '8px', marginBottom: '20px' }}>
+                                    <h3 style={{ color: 'var(--success-green)', marginTop: 0, marginBottom: '15px', fontSize: '1.1rem' }}>Share your happiness</h3>
                                     <div className="form-group">
                                         <label>Outcome of happiness: *</label>
                                         <input 
@@ -894,10 +897,10 @@ const StudentDashboard = () => {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        background: '#fff'
+                        background: 'var(--card-bg)'
                     }}>
                         <div>
-                            <h2 style={{ margin: 0, color: '#1e293b', fontSize: '1.4rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <h2 style={{ margin: 0, color: 'var(--primary-slate)', fontSize: '1.4rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{ fontSize: '1.6rem' }}>📈</span> Counselling Progress Tracker
                             </h2>
                             <p style={{ margin: '4px 0 0 40px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
@@ -922,43 +925,41 @@ const StudentDashboard = () => {
                     </div>
 
                     {/* Stats Row */}
-                    <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(3, 1fr)', 
-                        gap: '20px', 
+                    <div className="responsive-grid" style={{ 
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                         padding: '20px 30px',
-                        backgroundColor: '#f8fafc',
+                        backgroundColor: 'var(--bg-color)',
                         borderBottom: '1px solid var(--border-color)'
                     }}>
-                        <div style={{ backgroundColor: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ backgroundColor: 'var(--card-bg)', padding: '15px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{ fontSize: '1.5rem' }}>🎯</div>
                             <div>
-                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Total Sessions</div>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e293b' }}>{counsellingSessions.length}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Sessions</div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>{counsellingSessions.length}</div>
                             </div>
                         </div>
-                        <div style={{ backgroundColor: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ backgroundColor: 'var(--card-bg)', padding: '15px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{ fontSize: '1.5rem' }}>📊</div>
                             <div>
-                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Mood Trend</div>
-                                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Mood Trend</div>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--success-green)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     {counsellingSessions.length > 1 && counsellingSessions[0].emotion_level >= counsellingSessions[1].emotion_level ? '↗️ Positive' : '➡️ Stable'}
                                 </div>
                             </div>
                         </div>
-                        <div style={{ backgroundColor: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ backgroundColor: 'var(--card-bg)', padding: '15px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{ fontSize: '1.5rem' }}>📅</div>
                             <div>
-                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Last Session</div>
-                                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1e293b' }}>{counsellingSessions[0].session_date}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Last Session</div>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)' }}>{counsellingSessions[0].session_date}</div>
                             </div>
                         </div>
                     </div>
                     
-                    <div style={{ padding: '30px', display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) 1.2fr', gap: '40px', alignItems: 'start' }}>
+                    <div className="responsive-grid" style={{ padding: '30px', gap: '40px', alignItems: 'start' }}>
                         {/* Chart Side */}
                         <div style={{ position: 'relative' }}>
-                             <div style={{ height: '320px', backgroundColor: '#fff', padding: '20px', borderRadius: '16px', border: '1px solid rgba(226, 232, 240, 0.8)', boxShadow: '0 4px 20px -5px rgba(0,0,0,0.03)' }}>
+                             <div style={{ height: '320px', backgroundColor: 'var(--card-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-premium)' }}>
                                 <Line
                                     data={{
                                         labels: counsellingSessions.slice().reverse().map((s, i) => `Session ${i + 1}`),
@@ -976,12 +977,12 @@ const StudentDashboard = () => {
                                             },
                                             tension: 0.45,
                                             pointRadius: 6,
-                                            pointBackgroundColor: '#fff',
+                                            pointBackgroundColor: 'var(--card-bg)',
                                             pointBorderColor: '#10b981',
                                             pointBorderWidth: 3,
                                             pointHoverRadius: 9,
                                             pointHoverBackgroundColor: '#10b981',
-                                            pointHoverBorderColor: '#fff',
+                                            pointHoverBorderColor: 'var(--card-bg)',
                                             pointHoverBorderWidth: 4,
                                             fill: true
                                         }]
@@ -994,11 +995,11 @@ const StudentDashboard = () => {
                                             y: {
                                                 min: 0.5,
                                                 max: 5.5,
-                                                grid: { color: 'rgba(226, 232, 240, 0.4)', drawBorder: false },
+                                                grid: { color: theme === 'dark' ? 'rgba(226, 232, 240, 0.1)' : 'rgba(226, 232, 240, 0.4)', drawBorder: false },
                                                 ticks: {
                                                     stepSize: 1,
                                                     font: { size: 11, weight: '600' },
-                                                    color: '#94a3b8',
+                                                    color: theme === 'dark' ? '#e2e8f0' : '#64748b',
                                                     callback: (value) => {
                                                         const labels = { 5: 'Happy', 4: 'Neutral', 3: 'Anxious', 2: 'Stressed', 1: 'Sad' };
                                                         return labels[value] || '';
@@ -1007,7 +1008,7 @@ const StudentDashboard = () => {
                                             },
                                             x: {
                                                 grid: { display: false },
-                                                ticks: { font: { size: 11, weight: '600' }, color: '#94a3b8' }
+                                                ticks: { font: { size: 11, weight: '600' }, color: theme === 'dark' ? '#e2e8f0' : '#64748b' }
                                             }
                                         },
                                         plugins: { 
@@ -1022,7 +1023,8 @@ const StudentDashboard = () => {
                                                 callbacks: {
                                                     title: (context) => {
                                                         const sessionIdx = counsellingSessions.length - 1 - context[0].dataIndex;
-                                                        return `Session on ${counsellingSessions[sessionIdx].session_date}`;
+                                                        const sessionDate = new Date(counsellingSessions[sessionIdx].session_date);
+                                                        return `Session on ${sessionDate.toLocaleDateString()} (${sessionDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})`;
                                                     },
                                                     label: (context) => {
                                                         const labels = { 5: 'Happy', 4: 'Neutral', 3: 'Anxious', 2: 'Stressed', 1: 'Sad' };
@@ -1048,17 +1050,17 @@ const StudentDashboard = () => {
 
                         {/* Sessions Side */}
                         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <h3 style={{ fontSize: '1.1rem', color: '#1e293b', marginBottom: '20px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ color: '#3b82f6' }}>🕒</span> Recent Journey
+                            <h3 style={{ fontSize: '1.1rem', color: 'var(--text-main)', marginBottom: '20px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ color: 'var(--blue-accent)' }}>🕒</span> Recent Journey
                             </h3>
                             <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingRight: '12px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '380px' }}>
                                 {counsellingSessions.map((session, idx) => (
                                     <div key={idx} style={{ 
                                         padding: '20px', 
-                                        backgroundColor: '#fff', 
+                                        backgroundColor: 'var(--card-bg)', 
                                         borderRadius: '16px', 
                                         border: '1px solid var(--border-color)',
-                                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)',
+                                        boxShadow: 'var(--shadow-sm)',
                                         transition: 'all 0.3s ease',
                                         position: 'relative'
                                     }}>
@@ -1068,8 +1070,8 @@ const StudentDashboard = () => {
                                                     width: '32px', 
                                                     height: '32px', 
                                                     borderRadius: '10px', 
-                                                    backgroundColor: '#eff6ff', 
-                                                    color: '#3b82f6',
+                                                    backgroundColor: 'var(--bg-color)', 
+                                                    color: 'var(--blue-accent)',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
@@ -1078,19 +1080,24 @@ const StudentDashboard = () => {
                                                 }}>
                                                     {counsellingSessions.length - idx}
                                                 </div>
-                                                <div style={{ fontWeight: 700, fontSize: '1rem', color: '#1e293b' }}>
+                                                <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>
                                                     Session {getEmotionEmoji({5:'Happy', 4:'Neutral', 3:'Anxious', 2:'Stressed', 1:'Sad'}[session.emotion_level])}
                                                 </div>
                                             </div>
-                                            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, background: '#f1f5f9', padding: '4px 8px', borderRadius: '6px' }}>
-                                                {session.session_date}
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, background: 'var(--bg-color)', padding: '4px 8px', borderRadius: '6px' }}>
+                                                {new Date(session.session_date).toLocaleDateString()}
                                             </span>
                                         </div>
                                         
-                                        <div style={{ fontSize: '0.9rem', color: '#475569', lineHeight: '1.5', paddingLeft: '42px' }}>
-                                            <p style={{ margin: 0 }}>
-                                                <strong style={{ color: '#1e293b' }}>Insight:</strong> {session.advice}
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: '1.5', paddingLeft: '42px' }}>
+                                            <p style={{ margin: 0, marginBottom: '4px' }}>
+                                                <strong style={{ color: 'var(--text-main)' }}>Insight:</strong> {session.advice}
                                             </p>
+                                            {session.faculty_feedback && (
+                                                <p style={{ margin: 0, fontStyle: 'italic' }}>
+                                                    <strong style={{ color: 'var(--text-main)', fontStyle: 'normal' }}>Faculty Remarks:</strong> {session.faculty_feedback}
+                                                </p>
+                                            )}
                                         </div>
 
                                         {session.next_followup_date && (
@@ -1098,17 +1105,17 @@ const StudentDashboard = () => {
                                                 marginTop: '15px', 
                                                 marginLeft: '42px',
                                                 padding: '8px 12px', 
-                                                backgroundColor: '#fff7ed', 
+                                                backgroundColor: 'rgba(255, 247, 237, 0.1)', 
+                                                border: '1px solid rgba(255, 237, 213, 0.2)',
                                                 borderRadius: '8px', 
                                                 fontSize: '0.8rem', 
                                                 color: '#c2410c', 
                                                 fontWeight: 600,
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                gap: '8px',
-                                                border: '1px solid #ffedd5'
+                                                gap: '8px'
                                             }}>
-                                                <span>📅 Next Follow-Up:</span> {session.next_followup_date}
+                                                <span>📅 Next Follow-Up:</span> {new Date(session.next_followup_date).toLocaleDateString()}
                                             </div>
                                         )}
                                     </div>
@@ -1128,7 +1135,7 @@ const StudentDashboard = () => {
 
             {activeView === 'history' && (
                 <div className="card">
-                <h2 style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', color: '#1e293b' }}>
+                <h2 style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', color: 'var(--primary-slate)' }}>
                     <span style={{ fontSize: '1.5rem' }}>📜</span> Your Feedback History
                 </h2>
                 {history.length === 0 ? <p>No feedback submitted yet.</p> : (
@@ -1147,9 +1154,9 @@ const StudentDashboard = () => {
                         <tbody>
                             {history.map(item => (
                                 <tr key={item.id || item._id || Math.random()}>
-                                    <td style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>{item.date || '--'}</td>
+                                    <td style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>{item.date ? `${new Date(item.timestamp || item.date).toLocaleDateString()} (${new Date(item.timestamp || item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})` : '--'}</td>
                                     <td style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>
-                                         <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', whiteSpace: 'nowrap', fontWeight: 600 }}>
+                                         <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)', whiteSpace: 'nowrap', fontWeight: 600 }}>
                                              {item.emotion === 'Happy' && '😊'}
                                              {item.emotion === 'Stressed' && '😫'}
                                              {item.emotion === 'Anxious' && '😰'}
@@ -1158,31 +1165,31 @@ const StudentDashboard = () => {
                                              {item.emotion}
                                          </span>
                                      </td>
-                                    <td style={{ verticalAlign: 'top', fontWeight: 600, color: '#475569' }}>{item.emotion_intensity ? `${item.emotion_intensity}/5` : '--'}</td>
+                                    <td style={{ verticalAlign: 'top', fontWeight: 600, color: 'var(--text-secondary)' }}>{item.emotion_intensity ? `${item.emotion_intensity}/5` : '--'}</td>
                                     <td style={{ verticalAlign: 'top', fontSize: '0.85rem', lineHeight: '1.6' }}>
                                         {item.emotion === 'Happy' ? (
                                              <>
-                                                 <div><strong style={{ color: '#1e293b' }}>Domain:</strong> {item.emotion_domain || 'General Happiness'}</div>
-                                                 {item.outcome_of_happiness && <div><strong style={{ color: '#1e293b' }}>Outcome:</strong> {item.outcome_of_happiness}</div>}
+                                                 <div><strong style={{ color: 'var(--text-main)' }}>Domain:</strong> {item.emotion_domain || 'General Happiness'}</div>
+                                                 {item.outcome_of_happiness && <div><strong style={{ color: 'var(--text-main)' }}>Outcome:</strong> {item.outcome_of_happiness}</div>}
                                              </>
                                         ) : (
                                             <>
-                                                <div><strong style={{ color: '#1e293b' }}>Domain:</strong> {item.emotion_domain || item.reason || '--'}</div>
+                                                <div><strong style={{ color: 'var(--text-main)' }}>Domain:</strong> {item.emotion_domain || item.reason || '--'}</div>
                                                 {item.emotion_triggers && item.emotion_triggers.length > 0 && (
                                                     <div style={{ marginTop: '4px' }}>
-                                                        <strong style={{ color: '#1e293b' }}>Triggers:</strong>{' '}
+                                                        <strong style={{ color: 'var(--text-main)' }}>Triggers:</strong>{' '}
                                                         {Array.isArray(item.emotion_triggers) ? item.emotion_triggers.join(', ') : item.emotion_triggers}
                                                     </div>
                                                 )}
-                                                <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '10px', color: '#64748b' }}>
-                                                    <span><strong style={{ color: '#1e293b' }}>Impact:</strong> {item.life_impact_score ? `${item.life_impact_score}/5` : '--'}</span>
+                                                <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '10px', color: 'var(--text-secondary)' }}>
+                                                    <span><strong style={{ color: 'var(--text-main)' }}>Impact:</strong> {item.life_impact_score ? `${item.life_impact_score}/5` : '--'}</span>
                                                     <span>|</span>
-                                                    <span><strong style={{ color: '#1e293b' }}>Duration:</strong> {item.emotion_duration || '--'}</span>
+                                                    <span><strong style={{ color: 'var(--text-main)' }}>Duration:</strong> {item.emotion_duration || '--'}</span>
                                                 </div>
                                             </>
                                         )}
                                     </td>
-                                    <td style={{ verticalAlign: 'top', fontStyle: item.comment ? 'normal' : 'italic', color: item.comment ? '#334155' : '#94a3b8' }}>
+                                    <td style={{ verticalAlign: 'top', fontStyle: item.comment ? 'normal' : 'italic', color: item.comment ? 'var(--text-main)' : 'var(--text-secondary)' }}>
                                         {item.comment || 'No comment provided'}
                                     </td>
                                     <td style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>
@@ -1212,7 +1219,7 @@ const StudentDashboard = () => {
             {activeView === 'counselling_progress' && (
                 history.some(item => item.helpRequested || item.assignedFacultyName || item.assignedMentor || item.meetingVenue || item.meetingTimeSlot) ? (
                     <div className="card" style={{ marginTop: '30px' }}>
-                        <h2 style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', color: '#1e293b' }}>
+                        <h2 style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', color: 'var(--primary-slate)' }}>
                             <span style={{ fontSize: '1.5rem' }}>🧑‍🏫</span> Your Counselling Progress
                         </h2>
                     <div className="table-container">
@@ -1232,7 +1239,7 @@ const StudentDashboard = () => {
                                     .filter(item => item.helpRequested || item.assignedFacultyName || item.assignedMentor || item.meetingVenue || item.meetingTimeSlot)
                                     .map(item => (
                                     <tr key={item.id || item._id || Math.random()}>
-                                        <td style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>{item.date || '--'}</td>
+                                        <td style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>{item.date ? `${new Date(item.timestamp || item.date).toLocaleDateString()} (${new Date(item.timestamp || item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})` : '--'}</td>
                                         <td style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>
                                             <span style={{ 
                                                 fontWeight: 700, 
@@ -1247,7 +1254,7 @@ const StudentDashboard = () => {
                                             </span>
                                         </td>
                                         <td style={{ verticalAlign: 'top' }}>
-                                            <div style={{ fontWeight: 600, color: '#1e293b' }}>
+                                            <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>
                                                 {item.assignedFacultyName || item.assignedMentor || (item.assignedFacultyEmail ? item.assignedFacultyEmail.split('@')[0] : '--')}
                                             </div>
                                             {item.assignedFacultyEmail && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{item.assignedFacultyEmail}</div>}
@@ -1261,14 +1268,14 @@ const StudentDashboard = () => {
                                                             🔗 Join Online Meeting
                                                         </a>
                                                     ) : (
-                                                        <span style={{ fontSize: '0.85rem', color: '#334155', fontWeight: 600 }}>📍 {item.meetingVenue}</span>
+                                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 600 }}>📍 {item.meetingVenue}</span>
                                                     )
                                                 ) : <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Venue TBD</span>}
                                             </div>
                                             {/* Time Column */}
                                             {item.meetingTimeSlot ? (
-                                                <div style={{ fontSize: '0.8rem', color: '#475569' }}>
-                                                    🕐 {new Date(item.meetingTimeSlot).toLocaleString()}
+                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                    🕐 {new Date(item.meetingTimeSlot).toLocaleDateString()} ({new Date(item.meetingTimeSlot).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})
                                                 </div>
                                             ) : <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Time TBD</div>}
                                         </td>
@@ -1294,7 +1301,7 @@ const StudentDashboard = () => {
                                                  (item.status === 'ongoing' ? 'Ongoing' : (item.status === 'pending' ? 'Pending' : 'N/A')))}
                                            </span>
                                         </td>
-                                        <td style={{ minWidth: '300px', fontSize: '0.85rem', color: '#475569', verticalAlign: 'top' }}>
+                                        <td style={{ minWidth: '300px', fontSize: '0.85rem', color: 'var(--text-secondary)', verticalAlign: 'top' }}>
                                             {/* Faculty Feedback (fetched from each counselling session) */}
                                             {(() => {
                                                 if (!counsellingSessions || counsellingSessions.length === 0) {
@@ -1315,29 +1322,29 @@ const StudentDashboard = () => {
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                         {relatedSessions.map((session, index) => (
                                                             <div key={session._id} style={{
-                                                                background: '#fff',
+                                                                background: 'var(--card-bg)',
                                                                 padding: '12px',
                                                                 borderRadius: '8px',
-                                                                border: '1px solid #e2e8f0',
-                                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                                border: '1px solid var(--border-color)',
+                                                                boxShadow: 'var(--shadow-sm)'
                                                             }}>
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
-                                                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e293b', textTransform: 'uppercase' }}>
+                                                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)', textTransform: 'uppercase' }}>
                                                                         Session {index + 1}
                                                                     </div>
-                                                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                                                         {new Date(session.session_date).toLocaleDateString()}
                                                                     </div>
                                                                 </div>
                                                                 <div style={{ display: 'grid', gap: '8px' }}>
-                                                                    {session.concern && <div><strong style={{ color: '#1e293b', fontSize: '0.8rem' }}>Concern:</strong> {session.concern}</div>}
-                                                                    {session.discussion_summary && <div><strong style={{ color: '#1e293b', fontSize: '0.8rem' }}>Summary:</strong> {session.discussion_summary}</div>}
-                                                                    {session.advice && <div><strong style={{ color: '#1e293b', fontSize: '0.8rem' }}>Insight/Advice:</strong> {session.advice}</div>}
+                                                                    {session.concern && <div><strong style={{ color: 'var(--text-main)', fontSize: '0.8rem' }}>Concern:</strong> {session.concern}</div>}
+                                                                    {session.discussion_summary && <div><strong style={{ color: 'var(--text-main)', fontSize: '0.8rem' }}>Summary:</strong> {session.discussion_summary}</div>}
+                                                                    {session.advice && <div><strong style={{ color: 'var(--text-main)', fontSize: '0.8rem' }}>Insight/Advice:</strong> {session.advice}</div>}
                                                                     <div>
-                                                                        <strong style={{ color: '#1e293b', fontSize: '0.8rem' }}>Faculty Remarks:</strong><br />
-                                                                        <span style={{ fontStyle: 'italic', color: '#334155' }}>{session.faculty_feedback || 'No specific remarks.'}</span>
+                                                                        <strong style={{ color: 'var(--text-main)', fontSize: '0.8rem' }}>Faculty Remarks:</strong><br />
+                                                                        <span style={{ fontStyle: 'italic', color: 'var(--text-main)' }}>{session.faculty_feedback || 'No specific remarks.'}</span>
                                                                     </div>
-                                                                    {session.action_plan && <div><strong style={{ color: '#1e293b', fontSize: '0.8rem' }}>Action Plan:</strong> {session.action_plan}</div>}
+                                                                    {session.action_plan && <div><strong style={{ color: 'var(--text-main)', fontSize: '0.8rem' }}>Action Plan:</strong> {session.action_plan}</div>}
                                                                 </div>
                                                             </div>
                                                         ))}

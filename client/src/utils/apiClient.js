@@ -41,6 +41,14 @@ export const apiClient = async (endpoint, options = {}) => {
         }
 
         if (!response.ok) {
+            // Handle unauthorized (expired token)
+            if (response.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                // Force reload to trigger AuthContext update and redirect to login
+                window.location.href = '/login?expired=true';
+            }
+
             // Throw standardized error object
             const error = new Error(data.message || `Request failed with status ${response.status}`);
             error.status = response.status;

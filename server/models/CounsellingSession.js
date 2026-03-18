@@ -10,7 +10,12 @@ const counsellingSessionSchema = new mongoose.Schema({
     discussion_summary: { type: String, required: true },
     advice: { type: String, required: true },
     action_plan: { type: String, required: true },
-    next_followup_date: { type: String, required: true },
+    next_followup_date: { 
+        type: String, 
+        required: function() {
+            return this.session_status === 'Follow-Up Required';
+        }
+    },
     session_status: { type: String, enum: ['Completed', 'Follow-Up Required'], required: true },
     emotion_level: { type: Number, min: 1, max: 5, default: 3 },
     faculty_feedback: { type: String },

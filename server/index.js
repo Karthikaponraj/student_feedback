@@ -69,7 +69,7 @@ const authenticateToken = (req, res, next) => {
     jwt.verify(token, process.env.JWT_SECRET || 'supersecretkey123', (err, user) => {
         if (err) {
             console.error("❌ JWT Verification Failed:", err.message);
-            return res.sendStatus(403);
+            return res.status(401).json({ message: "Session expired, please log in again." });
         }
         req.user = user;
         next();
@@ -868,21 +868,33 @@ app.post('/api/counselling-sessions', authenticateToken, async (req, res) => {
         } = req.body;
         
         // Basic validation: Verify student exists and (optional) check assignment
-        const student = await User.findById(student_id);
+        let actual_student_id = student_id;
+        
+        // If student_id looks like an email, find the user
+        if (typeof student_id === 'string' && student_id.includes('@')) {
+            const user = await User.findOne({ email: student_id.toLowerCase().trim() });
+            if (user) {
+                actual_student_id = user._id;
+            } else {
+                return res.status(404).json({ message: "Student with this email not found" });
+            }
+        }
+
+        const student = await User.findById(actual_student_id);
         if (!student) return res.status(404).json({ message: "Student not found" });
 
         const newSession = new CounsellingSession({
-            student_id,
+            student_id: actual_student_id,
             faculty_id: req.user.id,
-            session_date,
-            session_mode,
-            venue,
-            concern,
-            discussion_summary,
-            advice,
-            action_plan,
-            next_followup_date,
-            session_status,
+            session_date: session_date || new Date().toISOString().split('T')[0],
+            session_mode: session_mode || 'In-Person',
+            venue: venue || 'TBD',
+            concern: concern || 'General Counselling',
+            discussion_summary: discussion_summary || '',
+            advice: advice || '',
+            action_plan: action_plan || '',
+            next_followup_date: (session_status === 'Completed' || !next_followup_date) ? undefined : next_followup_date,
+            session_status: session_status || 'Follow-Up Required',
             emotion_level: emotion_level || 3,
             faculty_feedback
         });
@@ -892,7 +904,7 @@ app.post('/api/counselling-sessions', authenticateToken, async (req, res) => {
         // Automation: If session status is "Completed", update corresponding case status to "resolved"
         if (session_status === 'Completed') {
             await Feedback.findOneAndUpdate(
-                { student: student_id, assignedFacultyEmail: req.user.email, status: { $ne: 'resolved' } },
+                { student: actual_student_id, assignedFacultyEmail: req.user.email, status: { $ne: 'resolved' } },
                 { status: 'resolved' }
             );
         }

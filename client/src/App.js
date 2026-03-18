@@ -145,7 +145,7 @@ const Navbar = ({ theme, toggleTheme }) => {
                 }}></div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div className="user-details" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                         <div style={{
                             fontSize: '0.85rem',
                             fontWeight: '700',
@@ -217,15 +217,15 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return children;
 };
 
-const DashboardRouter = () => {
+const DashboardRouter = ({ theme }) => {
     const { userRole } = useAuth();
 
     if (userRole === 'admin') {
-        return <AdminDashboard />;
+        return <AdminDashboard theme={theme} />;
     } else if (userRole === 'faculty') {
-        return <FacultyDashboard />;
+        return <FacultyDashboard theme={theme} />;
     } else {
-        return <StudentDashboard />;
+        return <StudentDashboard theme={theme} />;
     }
 };
 
@@ -256,7 +256,7 @@ function App() {
                             <ProtectedRoute allowedRoles={['student', 'faculty', 'admin']}>
                                 <>
                                     <Navbar theme={theme} toggleTheme={toggleTheme} />
-                                    <DashboardRouter />
+                                    <DashboardRouter theme={theme} />
                                 </>
                             </ProtectedRoute>
                         } />
@@ -264,7 +264,7 @@ function App() {
                             <ProtectedRoute allowedRoles={['faculty']}>
                                 <>
                                     <Navbar theme={theme} toggleTheme={toggleTheme} />
-                                    <CounsellingManagement />
+                                    <CounsellingManagement theme={theme} />
                                 </>
                             </ProtectedRoute>
                         } />

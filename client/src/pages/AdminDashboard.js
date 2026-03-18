@@ -105,7 +105,7 @@ const DetailedEmotionReasonAnalytics = ({ filteredFeedbacks, onShowStudents }) =
         <div className="card" style={{ marginTop: '30px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
                 <div>
-                    <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: 'var(--text-main)' }}>Emotion Reason Analytics</h2>
+                    <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: 'var(--primary-slate)' }}>Emotion Reason Analytics</h2>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', margin: 0 }}>Progress visualization with student drill-down and reports.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -128,11 +128,11 @@ const DetailedEmotionReasonAnalytics = ({ filteredFeedbacks, onShowStudents }) =
                     if (count === 0) return null;
 
                     const emotionStyles = {
-                        Happy: { emoji: '😊', color: '#10b981', bg: 'rgba(16, 185, 129, 0.05)', border: 'rgba(16, 185, 129, 0.1)' },
-                        Stressed: { emoji: '😫', color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.05)', border: 'rgba(244, 63, 94, 0.1)' },
-                        Anxious: { emoji: '😰', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.05)', border: 'rgba(245, 158, 11, 0.1)' },
-                        Neutral: { emoji: '😐', color: '#64748b', bg: 'rgba(100, 116, 139, 0.05)', border: 'rgba(100, 116, 139, 0.1)' },
-                        Sad: { emoji: '😢', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.05)', border: 'rgba(59, 130, 246, 0.1)' }
+                        Happy: { emoji: '😊', color: '#10b981', bg: 'rgba(16, 185, 129, 0.05)', border: 'rgba(16, 185, 129, 0.2)' },
+                        Stressed: { emoji: '😫', color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.05)', border: 'rgba(244, 63, 94, 0.2)' },
+                        Anxious: { emoji: '😰', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.05)', border: 'rgba(245, 158, 11, 0.2)' },
+                        Neutral: { emoji: '😐', color: '#64748b', bg: 'rgba(100, 116, 139, 0.05)', border: 'rgba(100, 116, 139, 0.2)' },
+                        Sad: { emoji: '😢', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.05)', border: 'rgba(59, 130, 246, 0.2)' }
                     };
                     const style = emotionStyles[emotion] || emotionStyles.Neutral;
                     const isOpen = expandedEmotions[emotion];
@@ -224,7 +224,7 @@ const DetailedEmotionReasonAnalytics = ({ filteredFeedbacks, onShowStudents }) =
     );
 };
 
-const AdminDashboard = () => {
+const AdminDashboard = ({ theme }) => {
     const [users, setUsers] = useState([]);
     const [feedbacks, setFeedbacks] = useState([]);
     const [helpRequests, setHelpRequests] = useState([]);
@@ -517,11 +517,11 @@ const AdminDashboard = () => {
                 label: '# of Votes',
                 data: Object.values(emotionCounts),
                 backgroundColor: [
-                    'rgba(16, 185, 129, 0.85)', // Happy
-                    'rgba(244, 63, 94, 0.85)',  // Stressed
-                    'rgba(245, 158, 11, 0.85)', // Anxious
-                    'rgba(148, 163, 184, 0.85)',// Neutral
-                    'rgba(59, 130, 246, 0.85)', // Sad
+                    'rgba(16, 185, 129, 0.4)', // Happy
+                    'rgba(244, 63, 94, 0.4)',  // Stressed
+                    'rgba(245, 158, 11, 0.4)', // Anxious
+                    'rgba(100, 116, 139, 0.4)',// Neutral
+                    'rgba(59, 130, 246, 0.4)', // Sad
                 ],
                 borderColor: '#ffffff',
                 borderWidth: 3,
@@ -539,10 +539,10 @@ const AdminDashboard = () => {
                 display: false
             },
             tooltip: {
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                titleColor: '#1e293b',
-                bodyColor: '#334155',
-                borderColor: '#e2e8f0',
+                backgroundColor: theme === 'dark' ? '#1e293b' : 'rgba(255, 255, 255, 0.95)',
+                titleColor: theme === 'dark' ? '#ffffff' : '#1e293b',
+                bodyColor: theme === 'dark' ? '#cbd5e1' : '#334155',
+                borderColor: theme === 'dark' ? '#334155' : '#e2e8f0',
                 borderWidth: 1,
                 padding: 12,
                 boxPadding: 6,
@@ -804,7 +804,7 @@ const AdminDashboard = () => {
                     )}
 
                     <div className="card" id="analytics-overview" style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
-                        <h2 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--text-main)', paddingRight: '10px' }}>Analytics Overview</h2>
+                        <h2 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary-slate)', paddingRight: '10px' }}>Analytics Overview</h2>
                         <div className="filters" style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, margin: 0 }}>
                             <label>From: <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} /></label>
                             <label>To: <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} /></label>

@@ -8,7 +8,7 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ChartDataLabels);
 
-const FacultyDashboard = () => {
+const FacultyDashboard = ({ theme }) => {
     const [cases, setCases] = useState([]);
     const [loading, setLoading] = useState(true);
     const [expandedId, setExpandedId] = useState(null);
@@ -174,11 +174,11 @@ const FacultyDashboard = () => {
                     label: 'Student Count',
                     data: [counts.Happy, counts.Stressed, counts.Anxious, counts.Neutral, counts.Sad],
                     backgroundColor: [
-                        '#10b981',  // Happy (Emerald Green)
-                        '#f43f5e',  // Stressed (Rose Red)
-                        '#f59e0b',  // Anxious (Amber Orange)
-                        '#64748b',  // Neutral (Slate Grey)
-                        '#3b82f6'   // Sad (Blue)
+                        'rgba(16, 185, 129, 0.4)',  // Happy (Emerald Green)
+                        'rgba(244, 63, 94, 0.4)',  // Stressed (Rose Red)
+                        'rgba(245, 158, 11, 0.4)',  // Anxious (Amber Orange)
+                        'rgba(100, 116, 139, 0.4)',  // Neutral (Slate Grey)
+                        'rgba(59, 130, 246, 0.4)'   // Sad (Blue)
                     ],
                     borderColor: [
                         '#10b981',
@@ -208,7 +208,7 @@ const FacultyDashboard = () => {
             datalabels: {
                 anchor: 'end',
                 align: 'top',
-                color: '#475569',
+                color: theme === 'dark' ? '#e2e8f0' : '#475569',
                 font: {
                     weight: '800',
                     size: 14
@@ -222,7 +222,7 @@ const FacultyDashboard = () => {
                 title: {
                     display: true,
                     text: 'Student Count',
-                    color: '#1e293b',
+                    color: theme === 'dark' ? '#e2e8f0' : '#1e293b',
                     font: { weight: 'bold' }
                 },
                 ticks: { stepSize: 1 }
@@ -231,7 +231,7 @@ const FacultyDashboard = () => {
                 title: {
                     display: true,
                     text: 'Emotion Categories',
-                    color: '#1e293b',
+                    color: theme === 'dark' ? '#e2e8f0' : '#1e293b',
                     font: { weight: 'bold' }
                 }
             }
@@ -260,7 +260,6 @@ const FacultyDashboard = () => {
             <button
                 onClick={() => setIsSidebarOpen(true)}
                 className="hamburger-btn"
-                style={{ top: '85px', left: '20px' }}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div className="line"></div>
@@ -290,42 +289,31 @@ const FacultyDashboard = () => {
                                 onClick={() => { setActiveView('dashboard'); setIsSidebarOpen(false); }}
                                 style={{ cursor: 'pointer' }}
                             >
-                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
-                                    <rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
-                                </svg>
-                                Faculty Dashboard
+                                🎛️ Faculty Dashboard
                             </div>
                             <div 
                                 className={`sidebar-link ${activeView === 'analytics' ? 'active' : ''}`} 
                                 onClick={() => { setActiveView('analytics'); setIsSidebarOpen(false); }}
                                 style={{ cursor: 'pointer' }}
                             >
-                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" />
-                                </svg>
-                                Student Emotional Overview
+                                📊 Student Emotional Overview
                             </div>
                             <Link to="/counselling-management" className="sidebar-link" onClick={() => setIsSidebarOpen(false)}>
-                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                                </svg>
-                                Counselling Management
+                                📒 Counselling Management
                             </Link>
                         </nav>
 
                         <div className="sidebar-footer">
-                            <div className="sidebar-user-info" style={{ backgroundColor: '#f8fafc', padding: '12px' }}>
-                                <div className="user-avatar" style={{ backgroundColor: '#334155', borderRadius: '12px', width: '45px', height: '45px' }}>
+                            <div className="sidebar-user-info">
+                                <div className="user-avatar">
                                     {getUserName().charAt(0)}
                                 </div>
                                 <div className="user-details">
-                                    <span className="user-name" style={{ color: '#1e293b' }}>{getUserName()}</span>
-                                    <span className="user-role" style={{ color: '#64748b' }}>Faculty Member</span>
+                                    <span className="user-name">{getUserName()}</span>
+                                    <span className="user-role">Faculty Member</span>
                                 </div>
                                 <div className="sidebar-logout-arrow" onClick={logout} title="Logout">
-                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                         <path d="M9 18l6-6-6-6" />
                                     </svg>
                                 </div>
@@ -363,18 +351,18 @@ const FacultyDashboard = () => {
                         onMouseEnter={() => setHoveredStat(i)}
                         onMouseLeave={() => setHoveredStat(null)}
                         style={{
-                            background: '#fff',
+                            background: 'var(--card-bg)',
                             borderRadius: '10px',
                             padding: '16px 20px',
-                            boxShadow: hoveredStat === i ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '0 2px 5px rgba(0,0,0,0.04)',
-                            border: '1px solid #e2e8f0',
+                            boxShadow: hoveredStat === i ? 'var(--shadow-lg)' : 'var(--shadow-premium)',
+                            border: '1px solid var(--border-color)',
                             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                             transform: hoveredStat === i ? 'translateY(-4px)' : 'translateY(0)',
                             cursor: 'default'
                         }}
                     >
-                        <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '12px' }}>{s.label}</div>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '12px' }}>{s.label}</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--primary-slate)', display: 'flex', alignItems: 'center', gap: '15px' }}>
                             <span style={{ 
                                 backgroundColor: hoveredStat === i ? s.color : `${s.color}15`, 
                                 padding: '8px', 
@@ -394,8 +382,8 @@ const FacultyDashboard = () => {
 
             {/* Consolidated Student Cases Card */}
             {activeView === 'dashboard' && (
-                <div className="card" style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '30px' }}>
-                    <h2 style={{ borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', marginBottom: '20px', color: '#4b6159' }}>
+                <div className="card" style={{ boxShadow: 'var(--shadow-premium)', marginBottom: '30px' }}>
+                    <h2 style={{ borderBottom: '2px solid var(--border-color)', paddingBottom: '10px', marginBottom: '20px', color: 'var(--primary-slate)' }}>
                         Allocated Students
                     </h2>
 
@@ -407,7 +395,7 @@ const FacultyDashboard = () => {
                         <div key={section.id} style={{ marginBottom: sectionIdx < 2 ? '25px' : '0' }}>
                             <h3 style={{ 
                                 fontSize: '1.1rem', 
-                                color: '#475569', 
+                                color: 'var(--text-main)', 
                                 display: 'flex', 
                                 alignItems: 'center', 
                                 gap: '10px',
@@ -419,13 +407,13 @@ const FacultyDashboard = () => {
                             </h3>
 
                             {section.list.length === 0 ? (
-                                <div style={{ padding: '10px 20px', borderLeft: '1px solid #e2e8f0', marginLeft: '8px' }}>
-                                    <p style={{ color: '#94a3b8', fontSize: '0.9rem', fontStyle: 'italic', margin: 0 }}>
+                                <div style={{ padding: '10px 20px', borderLeft: '1px solid var(--border-color)', marginLeft: '8px' }}>
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic', margin: 0 }}>
                                         No {section.title.toLowerCase()} list.
                                     </p>
                                 </div>
                             ) : (
-                                <div style={{ marginLeft: '8px', borderLeft: '1px solid #e2e8f0', paddingLeft: '20px' }}>
+                                <div style={{ marginLeft: '8px', borderLeft: '1px solid var(--border-color)', paddingLeft: '20px' }}>
                                     {section.list.map(c => {
                                         const isLocked = !!(c.meetingTimeSlot && c.meetingVenue && c.status && c.status !== 'allocated');
                                         const isResolved = c.status === 'resolved';
@@ -441,39 +429,40 @@ const FacultyDashboard = () => {
 
                                         return (
                                             <div key={c.id} style={{
-                                                border: '1px solid #e2e8f0',
+                                                border: '1px solid var(--border-color)',
                                                 borderRadius: '10px',
                                                 marginBottom: '12px',
                                                 overflow: 'hidden',
                                                 transition: 'box-shadow 0.2s',
-                                                boxShadow: expandedId === c.id ? '0 4px 12px rgba(0,0,0,0.1)' : 'none',
-                                                backgroundColor: '#fff'
+                                                boxShadow: expandedId === c.id ? 'var(--shadow-md)' : 'none',
+                                                backgroundColor: 'var(--card-bg)'
                                             }}>
                                                 {/* Row Header */}
                                                 <div
                                                     onClick={() => toggleExpand(c.id)}
                                                     style={{
                                                         display: 'grid',
-                                                        gridTemplateColumns: '1.5fr 1fr 1fr 1fr auto',
+                                                        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
                                                         alignItems: 'center',
+                                                        gap: '15px',
                                                         padding: '14px 20px',
                                                         cursor: 'pointer',
-                                                        backgroundColor: expandedId === c.id ? '#f8fafc' : '#fff',
+                                                        backgroundColor: expandedId === c.id ? 'var(--bg-color)' : 'var(--card-bg)',
                                                         transition: 'background 0.2s'
                                                     }}
                                                 >
                                                     <div>
-                                                        <strong style={{ color: '#1e293b' }}>{c.studentName}</strong>
-                                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{c.studentDetails?.regno || c.regno || '—'}</div>
+                                                        <strong style={{ color: 'var(--text-main)' }}>{c.studentName}</strong>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.studentDetails?.regno || c.regno || '—'}</div>
                                                     </div>
                                                     <div>
-                                                        <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                                                             {c.studentDetails?.department || '—'}
                                                         </span>
                                                     </div>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                         <span style={{ fontSize: '1.2rem' }}>{getEmotionEmoji(c.emotion)}</span>
-                                                        <span style={{ fontSize: '0.85rem', color: '#64748b' }}>{c.emotion}</span>
+                                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{c.emotion}</span>
                                                     </div>
                                                     <div>
                                                         <span style={{
@@ -484,18 +473,18 @@ const FacultyDashboard = () => {
                                                             {statusLabels[c.status || 'allocated']}
                                                         </span>
                                                     </div>
-                                                    <div style={{ fontSize: '1rem', color: '#94a3b8', transform: expandedId === c.id ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.3s' }}>
+                                                    <div style={{ fontSize: '1rem', color: 'var(--text-secondary)', transform: expandedId === c.id ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.3s', textAlign: 'right' }}>
                                                         ▼
                                                     </div>
                                                 </div>
 
                                                 {/* Expanded Details */}
                                                 {expandedId === c.id && (
-                                                    <div style={{ padding: '20px', borderTop: '1px solid #e2e8f0', backgroundColor: '#f8fafc', animation: 'fadeIn 0.3s ease-out' }}>
-                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                                                    <div style={{ padding: '20px', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-color)', animation: 'fadeIn 0.3s ease-out' }}>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
                                                             {/* Student Details */}
                                                             <div>
-                                                                <h4 style={{ color: '#4b6159', marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
+                                                                <h4 style={{ color: 'var(--primary-slate)', marginBottom: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
                                                                     📋 Student Details
                                                                 </h4>
                                                                 {c.studentDetails ? (
@@ -515,7 +504,7 @@ const FacultyDashboard = () => {
                                                                     </div>
                                                                 )}
 
-                                                                <h4 style={{ color: '#4b6159', marginTop: '20px', marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
+                                                                <h4 style={{ color: 'var(--primary-slate)', marginTop: '20px', marginBottom: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
                                                                     💬 Feedback Info
                                                                 </h4>
                                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.9rem' }}>
@@ -539,12 +528,12 @@ const FacultyDashboard = () => {
 
                                                             {/* Action Form */}
                                                             <div>
-                                                                <h4 style={{ color: '#4b6159', marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
+                                                                <h4 style={{ color: 'var(--primary-slate)', marginBottom: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
                                                                     ⚙️ Case Management
                                                                 </h4>
 
                                                                 <div style={{ marginBottom: '16px' }}>
-                                                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: '#334155', fontSize: '0.9rem' }}>
+                                                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: 'var(--text-main)', fontSize: '0.9rem' }}>
                                                                         Status
                                                                     </label>
                                                                     <select
@@ -555,9 +544,10 @@ const FacultyDashboard = () => {
                                                                             width: '100%',
                                                                             padding: '10px 12px',
                                                                             borderRadius: '8px',
-                                                                            border: '1px solid #cbd5e1',
+                                                                            border: '1px solid var(--border-color)',
                                                                             fontSize: '0.95rem',
-                                                                            backgroundColor: isResolved ? '#f1f5f9' : '#fff',
+                                                                            backgroundColor: isResolved ? 'var(--bg-color)' : 'var(--card-bg)',
+                                                                            color: 'var(--text-main)',
                                                                             cursor: isResolved ? 'not-allowed' : 'pointer'
                                                                         }}
                                                                     >
@@ -568,7 +558,7 @@ const FacultyDashboard = () => {
                                                                 </div>
 
                                                                 <div style={{ marginBottom: '16px' }}>
-                                                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: '#334155', fontSize: '0.9rem' }}>
+                                                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: 'var(--text-main)', fontSize: '0.9rem' }}>
                                                                         Session Mode
                                                                     </label>
                                                                     <select
@@ -579,9 +569,10 @@ const FacultyDashboard = () => {
                                                                             width: '100%',
                                                                             padding: '10px 12px',
                                                                             borderRadius: '8px',
-                                                                            border: '1px solid #cbd5e1',
+                                                                            border: '1px solid var(--border-color)',
                                                                             fontSize: '0.95rem',
-                                                                            backgroundColor: isResolved ? '#f1f5f9' : '#fff',
+                                                                            backgroundColor: isResolved ? 'var(--bg-color)' : 'var(--card-bg)',
+                                                                            color: 'var(--text-main)',
                                                                             cursor: isResolved ? 'not-allowed' : 'pointer'
                                                                         }}
                                                                     >
@@ -591,7 +582,7 @@ const FacultyDashboard = () => {
                                                                 </div>
 
                                                                 <div style={{ marginBottom: '16px' }}>
-                                                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: '#334155', fontSize: '0.9rem' }}>
+                                                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: 'var(--text-main)', fontSize: '0.9rem' }}>
                                                                         Meeting Time Slot
                                                                     </label>
                                                                     <input
@@ -604,17 +595,18 @@ const FacultyDashboard = () => {
                                                                             width: '100%',
                                                                             padding: '10px 12px',
                                                                             borderRadius: '8px',
-                                                                            border: '1px solid #cbd5e1',
+                                                                            border: '1px solid var(--border-color)',
                                                                             fontSize: '0.95rem',
                                                                             boxSizing: 'border-box',
-                                                                            backgroundColor: isResolved ? '#f1f5f9' : '#fff',
+                                                                            backgroundColor: isResolved ? 'var(--bg-color)' : 'var(--card-bg)',
+                                                                            color: 'var(--text-main)',
                                                                             cursor: isResolved ? 'not-allowed' : 'text'
                                                                         }}
                                                                     />
                                                                 </div>
 
                                                                 <div style={{ marginBottom: '16px' }}>
-                                                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: '#334155', fontSize: '0.9rem' }}>
+                                                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: 'var(--text-main)', fontSize: '0.9rem' }}>
                                                                         {editData.meetingMode === 'online' ? 'Meet Link' : 'Meeting Venue'}
                                                                     </label>
                                                                     <input
@@ -627,10 +619,11 @@ const FacultyDashboard = () => {
                                                                             width: '100%',
                                                                             padding: '10px 12px',
                                                                             borderRadius: '8px',
-                                                                            border: '1px solid #cbd5e1',
+                                                                            border: '1px solid var(--border-color)',
                                                                             fontSize: '0.95rem',
                                                                             boxSizing: 'border-box',
-                                                                            backgroundColor: isResolved ? '#f1f5f9' : '#fff',
+                                                                            backgroundColor: isResolved ? 'var(--bg-color)' : 'var(--card-bg)',
+                                                                            color: 'var(--text-main)',
                                                                             cursor: isResolved ? 'not-allowed' : 'text'
                                                                         }}
                                                                     />
@@ -640,12 +633,13 @@ const FacultyDashboard = () => {
                                                                 {/* Show current meeting info if set */}
                                                                 {(c.meetingTimeSlot || c.meetingVenue) && (
                                                                     <div style={{
-                                                                        backgroundColor: '#eff6ff',
+                                                                        backgroundColor: 'var(--bg-color)',
                                                                         padding: '10px 14px',
                                                                         borderRadius: '8px',
                                                                         marginBottom: '16px',
                                                                         fontSize: '0.85rem',
-                                                                        border: '1px solid #bfdbfe'
+                                                                        border: '1px solid var(--border-color)',
+                                                                        color: 'var(--text-main)'
                                                                     }}>
                                                                         <strong>Current Schedule:</strong><br />
                                                                         {c.meetingTimeSlot && <span>🕐 {new Date(c.meetingTimeSlot).toLocaleString()}<br /></span>}
@@ -661,7 +655,7 @@ const FacultyDashboard = () => {
                                                                         style={{
                                                                             width: '100%',
                                                                             padding: '12px',
-                                                                            backgroundColor: '#4b6159',
+                                                                            backgroundColor: 'var(--primary-slate)',
                                                                             color: 'white',
                                                                             border: 'none',
                                                                             borderRadius: '8px',
@@ -692,23 +686,23 @@ const FacultyDashboard = () => {
 
             {/* Student Emotion Overview Card */}
             {activeView === 'analytics' && (
-                <div className="card" style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '30px', padding: 0, overflow: 'hidden' }}>
-                    <div style={{ padding: '20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc' }}>
-                        <h2 style={{ color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.4rem' }}>
+                <div className="card" style={{ boxShadow: 'var(--shadow-premium)', marginBottom: '30px', padding: 0, overflow: 'hidden' }}>
+                    <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-color)' }}>
+                        <h2 style={{ color: 'var(--primary-slate)', margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.4rem' }}>
                             <span style={{ fontSize: '1.5rem' }}>📊</span> Student Emotion Overview
                         </h2>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, backgroundColor: '#fff', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>Live Analytics</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, backgroundColor: 'var(--card-bg)', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>Live Analytics</span>
                     </div>
                     
                     {cases.length > 0 ? (
                         <div style={{ 
                             display: 'grid', 
-                            gridTemplateColumns: 'minmax(0, 3fr) 1fr', 
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
                             gap: '0', 
                             minHeight: '400px'
                         }}>
                             {/* Left Side: Chart */}
-                            <div style={{ padding: '30px 40px', borderRight: '1px solid #f1f5f9' }}>
+                            <div style={{ padding: '30px 40px', borderRight: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)' }}>
                                 <div style={{ height: '350px', position: 'relative' }}>
                                     <Bar data={emotionChartData} options={{
                                         ...chartOptions,
@@ -718,12 +712,12 @@ const FacultyDashboard = () => {
                                                 ...chartOptions.scales.y,
                                                 grace: '20%',
                                                 grid: { display: false },
-                                                ticks: { ...chartOptions.scales.y.ticks, color: '#94a3b8' }
+                                                ticks: { ...chartOptions.scales.y.ticks, color: theme === 'dark' ? '#e2e8f0' : '#94a3b8' }
                                             },
                                             x: {
                                                 ...chartOptions.scales.x,
                                                 grid: { display: false },
-                                                ticks: { color: '#64748b', font: { weight: '600' } }
+                                                ticks: { color: theme === 'dark' ? '#e2e8f0' : '#64748b', font: { weight: '600' } }
                                             }
                                         }
                                     }} />
@@ -731,26 +725,26 @@ const FacultyDashboard = () => {
                             </div>
 
                             {/* Right Side: Breakdown List */}
-                            <div style={{ padding: '30px 25px', backgroundColor: '#fff' }}>
+                            <div style={{ padding: '30px 25px', backgroundColor: 'var(--card-bg)' }}>
                                 <h3 style={{ 
                                     fontSize: '0.75rem', 
-                                    color: '#64748b', 
+                                    color: 'var(--text-secondary)', 
                                     fontWeight: 700, 
                                     textTransform: 'uppercase', 
                                     letterSpacing: '1px',
                                     marginBottom: '25px',
                                     paddingBottom: '10px',
-                                    borderBottom: '1px solid #f1f5f9'
+                                    borderBottom: '1px solid var(--border-color)'
                                 }}>
                                     Breakdown
                                 </h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                     {[
-                                        { emotion: 'Happy', color: '#10b981' },
-                                        { emotion: 'Stressed', color: '#f43f5e' },
-                                        { emotion: 'Anxious', color: '#f59e0b' },
-                                        { emotion: 'Neutral', color: '#64748b' },
-                                        { emotion: 'Sad', color: '#3b82f6' }
+                                        { emotion: 'Happy', color: 'rgba(16, 185, 129, 0.6)' },
+                                        { emotion: 'Stressed', color: 'rgba(244, 63, 94, 0.6)' },
+                                        { emotion: 'Anxious', color: 'rgba(245, 158, 11, 0.6)' },
+                                        { emotion: 'Neutral', color: 'rgba(100, 116, 139, 0.6)' },
+                                        { emotion: 'Sad', color: 'rgba(59, 130, 246, 0.6)' }
                                     ].map((item) => {
                                         const count = emotionChartData.counts[item.emotion] || 0;
                                         const isHovered = hoveredBreakdown === item.emotion;
@@ -766,7 +760,7 @@ const FacultyDashboard = () => {
                                                     padding: '10px 12px',
                                                     borderRadius: '8px',
                                                     transition: 'all 0.25s ease',
-                                                    backgroundColor: isHovered ? '#f8fafc' : 'transparent',
+                                                    backgroundColor: isHovered ? 'var(--bg-color)' : 'transparent',
                                                     transform: isHovered ? 'translateX(5px)' : 'translateX(0)',
                                                     cursor: 'default'
                                                 }}
@@ -782,7 +776,7 @@ const FacultyDashboard = () => {
                                                     }}></div>
                                                     <span style={{ 
                                                         fontWeight: 600, 
-                                                        color: isHovered ? item.color : '#475569', 
+                                                        color: isHovered ? item.color : 'var(--text-main)', 
                                                         fontSize: '0.9rem',
                                                         transition: 'color 0.3s'
                                                     }}>{item.emotion}</span>
@@ -790,11 +784,11 @@ const FacultyDashboard = () => {
                                                 <div style={{ textAlign: 'right' }}>
                                                     <span style={{ 
                                                         fontWeight: 800, 
-                                                        color: '#1e293b', 
+                                                        color: 'var(--text-main)', 
                                                         fontSize: isHovered ? '1.25rem' : '1.1rem',
                                                         transition: 'all 0.3s'
                                                     }}>{count}</span>
-                                                    <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Count</div>
+                                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Count</div>
                                                 </div>
                                             </div>
                                         );
@@ -803,9 +797,9 @@ const FacultyDashboard = () => {
                             </div>
                         </div>
                     ) : (
-                        <div style={{ padding: '60px 0', textAlign: 'center' }}>
+                        <div style={{ padding: '60px 0', textAlign: 'center', backgroundColor: 'var(--card-bg)' }}>
                             <span style={{ fontSize: '3rem', display: 'block', marginBottom: '15px' }}>📈</span>
-                            <p style={{ color: '#94a3b8', fontStyle: 'italic' }}>
+                            <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>
                                 No feedback data available yet.
                             </p>
                         </div>
