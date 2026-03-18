@@ -49,8 +49,7 @@ const LoginPortal = () => {
     return (
         <div className="login-portal-container">
             <header className="login-page-header">
-                <h1>Student Emotional Feedback Platform</h1>
-                <p>Role-Based Secure Login Portal</p>
+                <p>Role-based Secure Login Portal</p>
             </header>
             <div className="login-portal-card">
                 <div className="login-icon-header">

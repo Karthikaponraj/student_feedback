@@ -245,7 +245,7 @@ h6 {
 
 .login-page-header {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.5rem;
   animation: fadeInDown 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   padding: 0;
 }
@@ -260,58 +260,60 @@ h6 {
 }
 
 .login-page-header p {
-  color: var(--text-secondary);
-  font-size: 1.25rem;
+  color: var(--primary-slate);
+  font-size: 1.8rem;
   font-weight: 700;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
+  opacity: 0.95;
+  margin-top: 2.5rem;
+  margin-bottom: 0;
 }
 
 .login-portal-card {
   width: 100%;
   max-width: 420px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--card-bg);
   padding: 3rem 2.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  border-radius: 24px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05),
-    0 10px 10px -5px rgba(0, 0, 0, 0.02),
-    inset 0 0 0 1px rgba(255, 255, 255, 1),
-    0 0 0 1px rgba(226, 232, 240, 0.8);
-  border: 1px solid rgba(71, 85, 105, 0.25);
+  border-radius: 20px;
+  box-shadow: var(--shadow-premium), 0 0 0 1px rgba(71, 85, 105, 0.1);
+  border: 1.5px solid var(--primary-slate); /* Set a stable, visible border */
+  border-color: rgba(51, 65, 85, 0.2);
   position: relative;
   overflow: hidden;
-  animation: premiumEntrance 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: premiumEntrance 1s cubic-bezier(0.19, 1, 0.22, 1) forwards;
   opacity: 0;
-  transform: translateY(30px) scale(0.95);
-  color: #1e293b;
+  transform: translateY(40px) scale(0.98);
+  color: var(--text-main);
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .login-portal-card:hover {
-  transform: translateY(-12px) scale(1.01);
-  box-shadow: 0 40px 70px -15px rgba(0, 0, 0, 0.12),
-    0 20px 40px -10px rgba(0, 0, 0, 0.08),
-    inset 0 0 0 1px rgba(255, 255, 255, 1),
-    0 0 0 1px rgba(71, 85, 105, 0.1);
-  border-color: rgba(71, 85, 105, 0.4);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: var(--shadow-lg), 0 15px 30px -10px rgba(51, 65, 85, 0.2);
+  border-color: var(--primary-slate);
 }
 
-/* removed colored top border */
-
+/* premium entrance with a more fluid, attractive bounce */
 @keyframes premiumEntrance {
   0% {
     opacity: 0;
-    transform: translateY(30px) scale(0.95) rotateX(-10deg);
+    transform: translateY(40px) scale(0.95);
+    filter: blur(10px);
+  }
+
+  60% {
+    opacity: 0.8;
+    transform: translateY(-5px) scale(1.01);
+    filter: blur(0);
   }
 
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1) rotateX(0);
+    transform: translateY(0) scale(1);
+    filter: blur(0);
   }
 }
 
@@ -325,6 +327,91 @@ h6 {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Responsiveness for Login Page */
+@media (max-width: 768px) {
+  .login-page-header p {
+    font-size: 1.4rem;
+  }
+  
+  .login-portal-card {
+    padding: 2.5rem 1.5rem;
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-page-header p {
+    font-size: 1.2rem;
+    padding: 0 1rem;
+  }
+  
+  .login-portal-card {
+    padding: 2rem 1.25rem;
+  }
+  
+  .login-icon-header {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 1rem;
+  }
+  
+  .login-icon-header svg {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .portal-login-title {
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* Theme overrides specifically for Login Portal to keep card light on dark bg */
+[data-theme='dark'] .login-page-header p {
+  color: #f8fafc;
+  opacity: 1;
+}
+
+[data-theme='dark'] .login-portal-card {
+  background: #ffffff;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='dark'] .portal-login-title {
+  color: #0f172a;
+}
+
+[data-theme='dark'] .underline-input-group {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+[data-theme='dark'] .underline-input-group input {
+  color: #0f172a !important;
+}
+
+[data-theme='dark'] .login-options-row {
+  color: #475569;
+}
+
+[data-theme='dark'] .register-section {
+  border-top-color: #e2e8f0;
+}
+
+[data-theme='dark'] .register-section span {
+  color: #64748b !important;
+}
+
+[data-theme='dark'] .register-link-trigger {
+  color: #334155 !important;
+}
+
+[data-theme='dark'] .register-as-text {
+  color: #64748b !important;
 }
 
 .login-icon-header {
@@ -346,13 +433,12 @@ h6 {
 }
 
 .portal-login-title {
-  color: #0f172a;
+  color: var(--text-main);
   font-size: 1.35rem;
   font-weight: 800;
   letter-spacing: 0.15em;
   margin-bottom: 2.5rem;
   text-transform: uppercase;
-  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.5);
 }
 
 .underline-input-group {
@@ -361,19 +447,18 @@ h6 {
   margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 0.85rem 1.2rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: inset 0 2px 5px rgba(255, 255, 255, 0.2), 0 4px 10px rgba(0, 0, 0, 0.02);
 }
 
 .underline-input-group:focus-within {
-  background: rgba(255, 255, 255, 1);
-  border-color: rgba(71, 85, 105, 0.4);
-  box-shadow: 0 8px 25px -5px rgba(148, 163, 184, 0.3), inset 0 2px 5px rgba(255, 255, 255, 1);
-  transform: translateY(-2px) scale(1.01);
+  background: var(--card-bg);
+  border-color: var(--primary-slate);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 .underline-input-group svg {
@@ -392,7 +477,7 @@ h6 {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  color: #0f172a !important;
+  color: var(--text-main) !important;
   padding: 0 !important;
   font-size: 1.05rem !important;
   flex: 1;
@@ -410,7 +495,7 @@ h6 {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
-  color: #475569;
+  color: var(--text-secondary);
   font-size: 0.875rem;
   font-weight: 500;
 }
