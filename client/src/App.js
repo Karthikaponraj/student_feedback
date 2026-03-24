@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { apiClient } from './utils/apiClient';
-import { API_BASE_URL } from './config/api';
+import API_URL from './config';
 
 import LoginPortal from './pages/LoginPortal';
 import Register from './pages/Register';
@@ -53,7 +53,7 @@ const BackendHealthCheck = () => {
         }}>
             <strong>⚠️ Backend Connection Failed</strong>
             <p style={{ margin: '5px 0', fontSize: '0.9rem' }}>
-                Unable to connect to the server at {API_BASE_URL}.
+                Unable to connect to the server at {API_URL}/api.
             </p>
             <button
                 onClick={checkHealth}

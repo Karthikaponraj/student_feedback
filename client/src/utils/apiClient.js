@@ -1,5 +1,5 @@
 
-import { API_BASE_URL } from '../config/api';
+import API_URL from '../config';
 
 /**
  * Standardized API client for all requests
@@ -10,7 +10,7 @@ import { API_BASE_URL } from '../config/api';
  * - Error standardization
  */
 export const apiClient = async (endpoint, options = {}) => {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${API_URL}/api${endpoint}`;
 
     const headers = {
         'Content-Type': 'application/json',
